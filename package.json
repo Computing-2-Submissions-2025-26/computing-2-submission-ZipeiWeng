@@ -2,7 +2,7 @@
   "name": "computing-2-submission",
   "type": "module",
   "version": "1.0.0",
-  "description": "Hidden Key Hunt coursework web game",
+  "description": "Journey coursework web game",
   "main": "web-app/game.js",
   "scripts": {
     "test": "mocha",

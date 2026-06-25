@@ -33,6 +33,7 @@ function copyPlayer(player, patch) {
     }, patch || {});
 }
 
+// Return a test game with one patched player.
 function withPlayer(game, playerId, patch) {
     return Object.assign({}, game, {
         players: game.players.map(function (player) {
@@ -44,12 +45,14 @@ function withPlayer(game, playerId, patch) {
     });
 }
 
+// Return a test game with patched key state.
 function withKey(game, patch) {
     return Object.assign({}, game, {
         key: Object.assign({}, game.key, patch)
     });
 }
 
+// Return a test game with one patched tile.
 function withTile(game, index, patch) {
     return Object.assign({}, game, {
         tiles: game.tiles.map(function (tile) {
@@ -70,7 +73,7 @@ function makeGame(options) {
     }, options || {}));
 }
 
-describe("hidden key party board game module", function () {
+describe("Journey game module", function () {
     it("createGame creates a 9x9 board", function () {
         const game = makeGame();
 

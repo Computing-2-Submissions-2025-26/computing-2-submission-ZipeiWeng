@@ -1,4 +1,4 @@
-// Hidden Key Hunt game rules.
+// Journey game rules.
 // This module is deliberately DOM-free: it only receives game state data and
 // returns new game state data for the browser UI or the unit tests to use.
 
@@ -90,10 +90,12 @@ const RANDOM_TILE_WEIGHTS = Object.freeze([
     {type: TILE_TYPES.BOMB_DEFUSER, weight: 7 * NON_EMPTY_TILE_WEIGHT_SCALE}
 ]);
 
+// Return whether a tile index is one of the fixed player spawn tiles.
 function isSpawnIndex(index) {
     return SPAWN_POSITIONS.indexOf(index) !== -1;
 }
 
+// Return whether a tile should never receive random hidden content.
 function isProtectedTile(index) {
     return index === EXIT_INDEX || isSpawnIndex(index);
 }
@@ -106,6 +108,7 @@ function makeSeed(seed) {
     return 123456789;
 }
 
+// Advance the deterministic random generator by one step.
 function nextRandomValue(seed) {
     const nextSeed = (seed * 1664525 + 1013904223) >>> 0;
     return {
@@ -139,6 +142,7 @@ function clonePlayer(player) {
     };
 }
 
+// Copy one tile so rule updates never mutate the old board.
 function cloneTile(tile) {
     return {
         index: tile.index,
@@ -148,6 +152,7 @@ function cloneTile(tile) {
     };
 }
 
+// Copy the full game state before applying rule changes.
 function cloneGame(gameState) {
     return {
         boardSize: gameState.boardSize,
@@ -185,23 +190,28 @@ function getPlayer(game, playerId) {
     });
 }
 
+// Return the active player inside a cloned game state.
 function getCurrentMutablePlayer(game) {
     return game.players[game.currentPlayerIndex];
 }
 
+// Return the mutable tile object at a board index.
 function getTile(game, tileIndex) {
     return game.tiles[tileIndex];
 }
 
+// Store the latest player-facing rule message on the game state.
 function setMessage(game, message) {
     game.lastMessage = message;
     return game;
 }
 
+// Read how many times a tile type has already appeared.
 function openedTypeCount(game, tileType) {
     return game.revealedTypeCounts[tileType] || 0;
 }
 
+// Return whether a tile type should be spread out spatially.
 function isEventOrItemTileType(tileType) {
     return tileType !== null &&
         tileType !== TILE_TYPES.EMPTY &&
@@ -209,6 +219,7 @@ function isEventOrItemTileType(tileType) {
         tileType !== TILE_TYPES.EXIT;
 }
 
+// Reduce event/item weight when similar content is nearby.
 function spatialSpreadMultiplier(game, tileIndex, tileType) {
     let multiplier = 1;
 
@@ -243,12 +254,14 @@ function dynamicTileWeight(game, entry, tileIndex) {
         (openedTypeCount(game, entry.type) + 1);
 }
 
+// Track a newly revealed tile type for future weighting.
 function recordRevealedType(game, tileType) {
     if (tileType !== null && tileType !== TILE_TYPES.EXIT) {
         game.revealedTypeCounts[tileType] = openedTypeCount(game, tileType) + 1;
     }
 }
 
+// Choose hidden tile content using the current dynamic weights.
 function chooseWeightedTileType(game, tileIndex) {
     const totalWeight = RANDOM_TILE_WEIGHTS.reduce(function (total, entry) {
         return total + dynamicTileWeight(game, entry, tileIndex);
@@ -298,6 +311,7 @@ function chooseKeyPosition(playerCount, options) {
     };
 }
 
+// Choose which early reveal will force the key to appear.
 function chooseKeyRevealNumber(playerCount, options) {
     const queuedReveal = options.keyRevealNumber;
 
@@ -367,6 +381,7 @@ function makePlayers(playerCount) {
     });
 }
 
+// Protect optional setup data from missing or invalid input.
 function normalizeOptions(options) {
     if (options === undefined) {
         return {};
@@ -374,6 +389,7 @@ function normalizeOptions(options) {
     return options;
 }
 
+// Copy deterministic tile overrides supplied by tests or setup.
 function copyPlannedContents(options) {
     const contents = options.tileContentsByIndex || options.tileContents || {};
     return Object.assign({}, contents);
@@ -395,6 +411,7 @@ function chooseTileContent(game, tileIndex) {
     return chooseWeightedTileType(game, tileIndex);
 }
 
+// Add an item only if the player does not already have it.
 function addItemToPlayer(game, playerId, itemType) {
     const player = getPlayer(game, playerId);
 
@@ -406,14 +423,17 @@ function addItemToPlayer(game, playerId, itemType) {
     return true;
 }
 
+// Return whether an item must be used or dismissed immediately.
 function isTemporaryEventItem(itemType) {
     return TEMPORARY_EVENT_TYPES.indexOf(itemType) !== -1;
 }
 
+// Return whether a player holds a temporary event item.
 function hasTemporaryItem(player, itemType) {
     return (player.temporaryItems || []).indexOf(itemType) !== -1;
 }
 
+// Remove all current-turn-only items from a player.
 function clearTemporaryEvents(player) {
     const temporaryItems = (player.temporaryItems || []).slice();
 
@@ -423,6 +443,7 @@ function clearTemporaryEvents(player) {
     player.temporaryItems = [];
 }
 
+// Give a player a temporary event and mark it as pending.
 function addTemporaryEventToPlayer(game, playerId, itemType) {
     const player = getPlayer(game, playerId);
 
@@ -431,6 +452,7 @@ function addTemporaryEventToPlayer(game, playerId, itemType) {
     player.temporaryItems.push(itemType);
 }
 
+// Convert an internal item id into lower-case display text.
 function readableItemName(itemType) {
     if (itemType === "") {
         return "no extra";
@@ -438,6 +460,7 @@ function readableItemName(itemType) {
     return itemType.replace(/([A-Z])/g, " $1").toLowerCase();
 }
 
+// Remove one item from inventory and temporary item tracking.
 function removeOneItem(player, itemType) {
     const itemIndex = player.items.indexOf(itemType);
 
@@ -456,6 +479,7 @@ function removeOneItem(player, itemType) {
     return true;
 }
 
+// Choose a random no-move reward the player does not own.
 function chooseNoMoveRewardItem(game, player) {
     const availableItems = NO_MOVE_REWARD_ITEMS.filter(function (itemType) {
         return player.items.indexOf(itemType) === -1;
@@ -522,6 +546,7 @@ function killPlayer(game, playerId) {
     clearTemporaryEvents(player);
 }
 
+// Apply HP loss and knock out the player if HP reaches zero.
 function damagePlayer(game, playerId, amount) {
     const player = getPlayer(game, playerId);
     player.hp -= amount;
@@ -591,6 +616,7 @@ function passBombFromMover(game, playerId) {
     return true;
 }
 
+// Mark the game as won when a key holder reaches the exit.
 function checkWin(game, playerId) {
     const player = getPlayer(game, playerId);
 
@@ -605,6 +631,7 @@ function checkWin(game, playerId) {
     return false;
 }
 
+// Turn a used event or item tile into an empty revealed tile.
 function consumeTile(game, tileIndex) {
     const tile = getTile(game, tileIndex);
     tile.type = TILE_TYPES.EMPTY;
@@ -612,6 +639,7 @@ function consumeTile(game, tileIndex) {
     tile.consumed = true;
 }
 
+// Describe the effect shown when a tile is revealed.
 function tileEffectDescription(tileType) {
     if (tileType === TILE_TYPES.WALL) {
         return "Wall revealed: this tile blocks movement.";
@@ -667,6 +695,7 @@ function collectItemFromTile(game, playerId, tile, itemType, collectedMessage) {
     return "Duplicate item blocked: this player already has " + readableItemName(itemType) + ".";
 }
 
+// Collect a current-turn event from a stepped-on tile.
 function collectTemporaryEventFromTile(game, playerId, tile, itemType, collectedMessage) {
     addTemporaryEventToPlayer(game, playerId, itemType);
     consumeTile(game, tile.index);
@@ -677,6 +706,7 @@ function collectTemporaryEventFromTile(game, playerId, tile, itemType, collected
     return collectedMessage;
 }
 
+// Apply the effect for the tile occupied by a player.
 function resolveTileEffectAt(game, playerId, tileIndex) {
     const player = getPlayer(game, playerId);
     const tile = getTile(game, tileIndex);
@@ -723,10 +753,12 @@ function resolveTileEffectAt(game, playerId, tileIndex) {
     return "";
 }
 
+// Resolve any tile effect at the player's current position.
 function resolveSteppedTile(game, playerId) {
     return resolveTileEffectAt(game, playerId, getPlayer(game, playerId).position);
 }
 
+// Prepare action count for the active player's new turn.
 function beginCurrentTurn(game) {
     const player = getCurrentMutablePlayer(game);
     clearTemporaryEvents(player);
@@ -735,6 +767,7 @@ function beginCurrentTurn(game) {
     player.movedThisTurn = false;
 }
 
+// Return bomb damage from Manhattan distance.
 function timedBombDamageForDistance(distance) {
     if (distance === 0) {
         return "kill";
@@ -748,6 +781,7 @@ function timedBombDamageForDistance(distance) {
     return 0;
 }
 
+// Convert one revealed wall into an empty tile.
 function destroyWallTile(game, tileIndex) {
     const tile = getTile(game, tileIndex);
 
@@ -756,6 +790,7 @@ function destroyWallTile(game, tileIndex) {
     }
 }
 
+// Destroy revealed walls inside a blast radius.
 function destroyBlastWalls(game, tileIndex) {
     let index = 0;
 
@@ -767,6 +802,7 @@ function destroyBlastWalls(game, tileIndex) {
     }
 }
 
+// Resolve one or more timed bomb explosions.
 function applyTimedBombExplosions(game, explosions) {
     const playerPositions = game.players.map(function (player) {
         return {
@@ -856,12 +892,14 @@ function tickBombForPlayer(game, playerId) {
     return "";
 }
 
+// Clear a pending event owned by one player.
 function clearPendingEventForPlayer(game, playerId) {
     if (game.pendingEvent !== null && game.pendingEvent.playerId === playerId) {
         game.pendingEvent = null;
     }
 }
 
+// Move to the next player and resolve end-of-turn effects.
 function advanceTurnCursor(game) {
     const endingPlayerId = getCurrentMutablePlayer(game).id;
     const wasLastPlayer = game.currentPlayerIndex === game.players.length - 1;
@@ -878,6 +916,7 @@ function advanceTurnCursor(game) {
     }).join(" ");
 }
 
+// Skip any players whose next turn is restricted.
 function skipRestrictedTurns(game) {
     const skippedPlayerIds = [];
     const bombMessages = [];
@@ -904,6 +943,7 @@ function skipRestrictedTurns(game) {
     };
 }
 
+// Build the message shown at the start of a turn.
 function turnStartMessage(game, skippedPlayerIds, bombMessages) {
     const pieces = bombMessages.slice();
 
@@ -914,6 +954,7 @@ function turnStartMessage(game, skippedPlayerIds, bombMessages) {
     return pieces.join(" ");
 }
 
+// Skip the active player when their restriction triggers.
 function skipRestrictedCurrentTurn(gameState) {
     const game = cloneGame(gameState);
     const skippedPlayer = getCurrentMutablePlayer(game);
@@ -983,6 +1024,7 @@ function getTargetPlayerId(target) {
     return null;
 }
 
+// Read and clamp a timed bomb countdown target.
 function getCountdown(target) {
     if (target && Number.isInteger(target.countdown)) {
         return target.countdown;
@@ -995,6 +1037,7 @@ function getCountdown(target) {
     return null;
 }
 
+// Read a two-tile target for tile-swap items.
 function getTilePair(target) {
     if (Array.isArray(target) && target.length >= 2) {
         return {
@@ -1013,6 +1056,7 @@ function getTilePair(target) {
     return null;
 }
 
+// Read a single tile target for remote trigger.
 function getTileIndexTarget(target) {
     if (typeof target === "number") {
         return target;
@@ -1026,6 +1070,7 @@ function getTileIndexTarget(target) {
     return null;
 }
 
+// Read the item or key selected for thief hand.
 function getTargetItemType(target) {
     if (target && typeof target.itemType === "string") {
         return target.itemType;
@@ -1036,6 +1081,7 @@ function getTargetItemType(target) {
     return "";
 }
 
+// Validate that a tile can be used in a costly swap.
 function canSwapTile(game, index) {
     const tile = Number.isInteger(index) && index >= 0 && index < BOARD_SIZE * BOARD_SIZE
         ? getTile(game, index)
@@ -1044,6 +1090,7 @@ function canSwapTile(game, index) {
     return tile !== undefined && tile.revealed && !isSpawnIndex(index);
 }
 
+// Validate a tile target for remote trigger.
 function canRemoteTriggerTile(game, tileIndex, playerPosition) {
     let tile;
 
@@ -1064,6 +1111,7 @@ function canRemoteTriggerTile(game, tileIndex, playerPosition) {
         tile.type !== TILE_TYPES.EXIT;
 }
 
+// Return whether any player currently occupies a tile.
 function tileHasPlayer(game, tileIndex) {
     return game.players.some(function (player) {
         return player.position === tileIndex;
@@ -1103,6 +1151,7 @@ function swapTileContents(game, firstIndex, secondIndex) {
     }
 }
 
+// Reveal one tile affected by a mine blast.
 function revealBlastTile(game, tileIndex, explodedMineIndexes) {
     const tile = getTile(game, tileIndex);
 
@@ -1131,6 +1180,7 @@ function revealBlastTile(game, tileIndex, explodedMineIndexes) {
     }
 }
 
+// Reveal all neighbours affected by a mine blast.
 function revealBlastNeighbours(game, tileIndex, explodedMineIndexes) {
     let index = 0;
 

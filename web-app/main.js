@@ -1,4 +1,4 @@
-// Browser UI for Hidden Key Hunt.
+// Browser UI for Journey.
 // Rule decisions stay in game.js; this file only renders state, gathers user
 // input, and calls exported game functions.
 
@@ -180,6 +180,7 @@ function tileName(tile) {
     return tile.type;
 }
 
+// Convert internal camelCase ids into readable UI text.
 function readableType(type) {
     if (type === "") {
         return "No item";
@@ -187,6 +188,7 @@ function readableType(type) {
     return type.replace(/([A-Z])/g, " $1");
 }
 
+// Escape text before inserting it into HTML attributes.
 function escapeAttribute(value) {
     return String(value).replace(/&/g, "&amp;")
         .replace(/"/g, "&quot;")
@@ -194,30 +196,36 @@ function escapeAttribute(value) {
         .replace(/>/g, "&gt;");
 }
 
+// Read the selected number of players from setup.
 function playerCount() {
     return Number(setupPlayerCountElement.value);
 }
 
+// Return only the player profiles currently in use.
 function activeProfiles() {
     return playerProfiles.slice(0, playerCount());
 }
 
+// Find the role metadata for a role id.
 function roleForId(roleId) {
     return ROLE_OPTIONS.find(function (role) {
         return role.id === roleId;
     }) || null;
 }
 
+// Return the CSS class that colours a character role.
 function roleClass(roleId) {
     return roleForId(roleId) === null ? "role-unselected" : "role-" + roleId;
 }
 
+// Return the one-based display number for a role option.
 function roleChoiceNumber(roleId) {
     return ROLE_OPTIONS.findIndex(function (role) {
         return role.id === roleId;
     }) + 1;
 }
 
+// Return custom name and role data for a player.
 function profileForPlayer(playerId) {
     return playerProfiles[playerId - 1] || {
         id: playerId,
@@ -227,14 +235,17 @@ function profileForPlayer(playerId) {
     };
 }
 
+// Build the fallback name for a player.
 function defaultPlayerName(playerId) {
     return "Player " + playerId;
 }
 
+// Return the custom name or fallback name for a player.
 function playerName(playerId) {
     return profileForPlayer(playerId).name.trim() || defaultPlayerName(playerId);
 }
 
+// Clean rule messages before displaying them in the UI.
 function formatMessageForUi(message) {
     let formatted = message || "";
     let keyHolderMatch;
@@ -276,18 +287,21 @@ function formatMessageForUi(message) {
     return formatted.trim();
 }
 
+// Return whether all selected players have confirmed characters.
 function isSetupReady() {
     return activeProfiles().every(function (profile) {
         return profile.roleId !== "" && profile.ready;
     });
 }
 
+// Find the first setup profile still needing confirmation.
 function firstUnreadyPlayerIndex() {
     return activeProfiles().findIndex(function (profile) {
         return profile.roleId === "" || !profile.ready;
     });
 }
 
+// Keep the setup cursor inside the active player range.
 function clampSetupActivePlayer() {
     const count = playerCount();
 
@@ -299,17 +313,20 @@ function clampSetupActivePlayer() {
     }
 }
 
+// Return the profile currently choosing a character.
 function setupActiveProfile() {
     clampSetupActivePlayer();
     return activeProfiles()[setupActivePlayerIndex] || activeProfiles()[0];
 }
 
+// Find which active player has already taken a role.
 function roleOwner(roleId) {
     return activeProfiles().find(function (profile) {
         return profile.roleId === roleId;
     }) || null;
 }
 
+// Clear setup character choices when returning to the menu.
 function resetSetupRoles() {
     playerProfiles.forEach(function (profile) {
         profile.roleId = "";
@@ -319,6 +336,7 @@ function resetSetupRoles() {
     setupPendingRoleId = "";
 }
 
+// Switch between menu, setup, intro, and game screens.
 function showScreen(screenName) {
     menuScreen.hidden = screenName !== "menu";
     setupScreen.hidden = screenName !== "setup";
@@ -350,6 +368,7 @@ function showScreen(screenName) {
     }
 }
 
+// Open or close the pause menu and manage focus.
 function setPaused(paused) {
     if (gameScreen.hidden) {
         return;
@@ -369,6 +388,7 @@ function setPaused(paused) {
     }
 }
 
+// Refresh setup status text and start button availability.
 function updateSetupStatus() {
     setupStartGameButton.disabled = !isSetupReady();
     setupStatusElement.textContent = isSetupReady()
@@ -378,6 +398,7 @@ function updateSetupStatus() {
             : "Confirm this colour.");
 }
 
+// Render the current player's character colour choices.
 function renderRolePicker() {
     const activeProfile = setupActiveProfile();
     const previewRoleId = setupPendingRoleId === "" ? activeProfile.roleId : setupPendingRoleId;
@@ -410,6 +431,7 @@ function renderRolePicker() {
         (canConfirm ? "" : " disabled") + ">Confirm</button>";
 }
 
+// Render name inputs and selected character previews.
 function renderPlayerSetup() {
     playerSetupListElement.innerHTML = "";
 
@@ -434,6 +456,7 @@ function renderPlayerSetup() {
     updateSetupStatus();
 }
 
+// Select a pending character role during setup.
 function selectSetupRole(roleId) {
     const profile = setupActiveProfile();
     const owner = roleOwner(roleId);
@@ -448,6 +471,7 @@ function selectSetupRole(roleId) {
     renderPlayerSetup();
 }
 
+// Confirm the current player's role and advance setup.
 function confirmSetupRole() {
     const profile = setupActiveProfile();
     const owner = roleOwner(setupPendingRoleId);
@@ -466,6 +490,7 @@ function confirmSetupRole() {
     renderPlayerSetup();
 }
 
+// Return the selected inventory item, clearing invalid selection.
 function currentSelectedItem(player) {
     if (selectedItemIndex === null || selectedItemIndex < 0 || selectedItemIndex >= player.items.length) {
         selectedItemIndex = null;
@@ -475,6 +500,7 @@ function currentSelectedItem(player) {
     return player.items[selectedItemIndex];
 }
 
+// Return how many board tiles an item needs as targets.
 function requiredTileTargetCount(itemType) {
     if (itemType === ITEM_TYPES.SWAP_ANY_TILES_WITH_HP_COST) {
         return 2;
@@ -485,6 +511,7 @@ function requiredTileTargetCount(itemType) {
     return 0;
 }
 
+// Return whether an item opens the player target modal.
 function isPlayerTargetItem(itemType) {
     return itemType === ITEM_TYPES.TIMED_BOMB_PACK ||
         itemType === ITEM_TYPES.RESTRICT_MOVE ||
@@ -492,16 +519,19 @@ function isPlayerTargetItem(itemType) {
         itemType === ITEM_TYPES.THIEF_HAND;
 }
 
+// Return whether an item can be dismissed as a temporary event.
 function isTemporaryEventItem(itemType) {
     return itemType === ITEM_TYPES.TIMED_BOMB_PACK ||
         itemType === ITEM_TYPES.RESTRICT_MOVE ||
         itemType === ITEM_TYPES.SWAP_PLAYER;
 }
 
+// Return whether the selected temporary event can be dismissed.
 function canNoUseItem(itemType) {
     return itemType !== "" && pendingEventItem() === itemType && isTemporaryEventItem(itemType);
 }
 
+// Dismiss a temporary event and update the game state.
 function discardTemporaryEvent(itemType) {
     if (!isTemporaryEventItem(itemType)) {
         return false;
@@ -516,6 +546,7 @@ function discardTemporaryEvent(itemType) {
     return true;
 }
 
+// Open the confirmation modal for dismissing a temporary event.
 function requestNoUse(itemType) {
     if (!canNoUseItem(itemType)) {
         return false;
@@ -529,6 +560,7 @@ function requestNoUse(itemType) {
     return true;
 }
 
+// Close the no-use confirmation modal.
 function closeNoUseModal() {
     if (!isNoUseModalOpen) {
         return;
@@ -540,6 +572,7 @@ function closeNoUseModal() {
     render();
 }
 
+// Confirm dismissing the currently pending temporary event.
 function confirmNoUseCancel() {
     const itemType = pendingNoUseItemType;
 
@@ -555,6 +588,7 @@ function confirmNoUseCancel() {
     return discardTemporaryEvent(itemType);
 }
 
+// Return the pending event item for the current player.
 function pendingEventItem() {
     const player = getCurrentPlayer(gameState);
 
@@ -567,6 +601,7 @@ function pendingEventItem() {
     return gameState.pendingEvent.itemType;
 }
 
+// Open item controls for a pending current-turn event.
 function openPendingEventControls() {
     const itemType = pendingEventItem();
 
@@ -587,6 +622,7 @@ function openPendingEventControls() {
     return false;
 }
 
+// Select the inventory entry that matches the pending event.
 function selectPendingEventItem() {
     const player = getCurrentPlayer(gameState);
     const itemType = pendingEventItem();
@@ -599,6 +635,7 @@ function selectPendingEventItem() {
     itemTargetTiles = [];
 }
 
+// Build short instructions for the selected item mode.
 function itemModeText(itemType) {
     const requiredTargets = requiredTileTargetCount(itemType);
 
@@ -611,6 +648,7 @@ function itemModeText(itemType) {
     return readableType(itemType) + ": choose target";
 }
 
+// Summarise selected board targets for item use.
 function itemTargetText() {
     if (itemTargetTiles.length === 0) {
         return "Tiles: -";
@@ -618,6 +656,7 @@ function itemTargetText() {
     return "Tiles: " + itemTargetTiles.join(", ");
 }
 
+// Create the heart icons for one player's HP.
 function heartElements(player) {
     return Array.from({length: player.maxHp}, function (ignore, index) {
         const heart = document.createElement("span");
@@ -629,6 +668,7 @@ function heartElements(player) {
     });
 }
 
+// Render the current player's sidebar HP.
 function renderHearts(player) {
     currentHpElement.innerHTML = "";
     currentHpElement.setAttribute("aria-label", playerName(player.id) + " HP " + player.hp + " of " + player.maxHp);
@@ -637,6 +677,7 @@ function renderHearts(player) {
     });
 }
 
+// Animate sidebar hearts after HP loss.
 function flashCurrentHearts() {
     currentHpElement.classList.remove("hp-flash");
     window.setTimeout(function () {
@@ -647,10 +688,12 @@ function flashCurrentHearts() {
     }, 1500);
 }
 
+// Return whether a player should show damage feedback.
 function isWeakenedPlayer(playerId) {
     return weakenedPlayerIds.indexOf(playerId) !== -1;
 }
 
+// Mark damaged players for a short on-map flash.
 function flashDamagedPlayers(playerIds) {
     const uniqueIds = playerIds.filter(function (playerId, index) {
         return playerIds.indexOf(playerId) === index;
@@ -668,6 +711,7 @@ function flashDamagedPlayers(playerIds) {
     }, 1450);
 }
 
+// Return the visible icon text for a tile.
 function tileText(tile) {
     if (tile.hasVisibleKey) {
         return TILE_ICONS.key;
@@ -684,6 +728,7 @@ function tileText(tile) {
     return TILE_ICONS[tile.type] || "";
 }
 
+// Append a tile image asset when a tile uses artwork.
 function appendTileImage(content, tile) {
     if (tile.hasVisibleKey || !tile.revealed || tile.type !== TILE_TYPES.MONSTER_CAMP) {
         return;
@@ -698,6 +743,7 @@ function appendTileImage(content, tile) {
     content.append(image);
 }
 
+// Return screen-reader and tooltip text for a tile.
 function tileEffectText(tile) {
     if (tile.hasVisibleKey) {
         return "Key: step onto this revealed tile to pick it up, then reach the centre exit.";
@@ -711,6 +757,7 @@ function tileEffectText(tile) {
     return TILE_EFFECTS[tile.type] || "Revealed tile.";
 }
 
+// Append occupant names to a tile accessibility label.
 function describePlayers(tile) {
     if (tile.players.length === 0) {
         return "";
@@ -720,6 +767,7 @@ function describePlayers(tile) {
     }).join(", ");
 }
 
+// Return effect detail text for the hidden status region.
 function effectTextFromMessage(message) {
     if (message === undefined || message === "") {
         return "Reveal a tile or step onto a revealed event to see its effect.";
@@ -727,6 +775,7 @@ function effectTextFromMessage(message) {
     return message;
 }
 
+// Build the CSS class list for one board tile.
 function tileClass(tile) {
     const classes = ["tile"];
 
@@ -755,21 +804,25 @@ function tileClass(tile) {
     return classes.join(" ");
 }
 
+// Set temporary UI-only status text.
 function setUiMessage(message) {
     uiMessage = message;
     renderTurn();
 }
 
+// Find a player in a game state by id.
 function playerById(game, playerId) {
     return game.players.find(function (player) {
         return player.id === playerId;
     });
 }
 
+// Return whether a walking animation is in progress.
 function isMovementAnimating() {
     return movementAnimation !== null;
 }
 
+// Convert a tile index to board-centred percentage coordinates.
 function tileCenterPercent(tileIndex) {
     const boardSize = gameState.boardSize;
     const row = Math.floor(tileIndex / boardSize);
@@ -781,6 +834,7 @@ function tileCenterPercent(tileIndex) {
     };
 }
 
+// Return sprite classes for the walking direction.
 function walkingDirectionClass(direction) {
     if (direction === DIRECTIONS.LEFT) {
         return "character-sprite sprite-side walk-side walk-left";
@@ -791,6 +845,7 @@ function walkingDirectionClass(direction) {
     return "character-sprite sprite-front walk-front";
 }
 
+// Build animation metadata for a successful move.
 function movementDetails(previousGame, nextGame, playerId, direction) {
     const previousPlayer = playerById(previousGame, playerId);
     const nextPlayer = playerById(nextGame, playerId);
@@ -810,6 +865,7 @@ function movementDetails(previousGame, nextGame, playerId, direction) {
     };
 }
 
+// Stop and remove any active movement animation.
 function clearMovementAnimation() {
     window.clearTimeout(movementTimer);
     movementAnimation = null;
@@ -817,11 +873,13 @@ function clearMovementAnimation() {
     gameScreen.classList.remove("movement-locked");
 }
 
+// Queue the next player handoff screen.
 function queueTurnHandoff(playerId, lockedState) {
     pendingTurnHandoffPlayerId = playerId;
     pendingTurnHandoffLockedState = lockedState || null;
 }
 
+// Show the handoff prompt when no other modal blocks it.
 function maybeShowTurnHandoff() {
     if (pendingTurnHandoffPlayerId === null || gameScreen.hidden || gameState.status === "won" ||
             isFeedbackOpen || isBombModalOpen || isNoUseModalOpen || isMovementAnimating() || isTurnHandoffOpen) {
@@ -835,6 +893,7 @@ function maybeShowTurnHandoff() {
     turnHandoffCard.focus();
 }
 
+// Close the handoff prompt and return focus to the board.
 function closeTurnHandoff() {
     if (!isTurnHandoffOpen) {
         return;
@@ -849,6 +908,7 @@ function closeTurnHandoff() {
     boardElement.focus();
 }
 
+// Close the event explanation prompt and continue flow.
 function closeCenterPrompt() {
     centerPromptElement.hidden = true;
     isFeedbackOpen = false;
@@ -863,16 +923,19 @@ function closeCenterPrompt() {
     maybeShowTurnHandoff();
 }
 
+// Apply display formatting to a UI message.
 function uiMessageText(message) {
     return formatMessageForUi(message);
 }
 
+// Detect messages about the no-move reward.
 function isNoMoveRewardMessage(message) {
     return typeof message === "string" &&
         (message.indexOf("after 5 turns without moving") !== -1 ||
         message.indexOf("did not move for 5 turns") !== -1);
 }
 
+// Find which item was newly added to a player.
 function addedItemType(previousPlayer, nextPlayer) {
     const previousItems = previousPlayer.items || [];
 
@@ -881,6 +944,7 @@ function addedItemType(previousPlayer, nextPlayer) {
     }) || "";
 }
 
+// Extract no-move reward details from state or message changes.
 function noMoveRewardDetails(previousGame, nextGame) {
     const messageMatch = nextGame.lastMessage.match(/Player (\d+) received ([^.]*?) after 5 turns without moving\./);
     let rewardPlayer;
@@ -913,6 +977,7 @@ function noMoveRewardDetails(previousGame, nextGame) {
     };
 }
 
+// Build the modal text for a no-move reward.
 function noMoveRewardPrompt(details) {
     if (details === null) {
         return "";
@@ -923,6 +988,7 @@ function noMoveRewardPrompt(details) {
         details.itemName + ".";
 }
 
+// Choose the title for an event explanation prompt.
 function promptTitleText(message) {
     if (isNoMoveRewardMessage(message)) {
         return "No Move Reward";
@@ -979,23 +1045,28 @@ function promptTitleText(message) {
     return "Event";
 }
 
+// Return the state snapshot currently shown in the sidebar.
 function sidebarGameState() {
     return lockedSidebarGameState || gameState;
 }
 
+// Build one simple visual explanation card.
 function visualCard(icon, label) {
     return "<span class=\"visual-card\"><span class=\"visual-icon\">" + icon + "</span><span>" + label + "</span></span>";
 }
 
+// Build one visual card that uses an image asset.
 function visualImageCard(source, label) {
     return "<span class=\"visual-card\"><img class=\"visual-image-icon\" src=\"" + source +
         "\" alt=\"\" aria-hidden=\"true\"><span>" + label + "</span></span>";
 }
 
+// Return whether a prompt should use the locked-door style.
 function isDoorWarningMessage(message) {
     return message.indexOf("Need the key to open the door") !== -1;
 }
 
+// Build the diagram shown in an event explanation prompt.
 function promptVisualHtml(message) {
     if (isNoMoveRewardMessage(message)) {
         return "<div class=\"visual-diagram\">" +
@@ -1144,6 +1215,7 @@ function promptVisualHtml(message) {
         "</div>";
 }
 
+// Show a central explanation prompt for an event or warning.
 function showCenterPrompt(message, shouldStayOpen) {
     const persistent = shouldStayOpen !== false;
     const visibleMessage = uiMessageText(message);
@@ -1163,6 +1235,7 @@ function showCenterPrompt(message, shouldStayOpen) {
     centerPromptTimer = window.setTimeout(closeCenterPrompt, 1800);
 }
 
+// Complete a walking animation and show any feedback.
 function finishMovementAnimation() {
     const feedbackMessage = movementAnimation === null ? "" : movementAnimation.message;
 
@@ -1180,6 +1253,7 @@ function finishMovementAnimation() {
     }
 }
 
+// Render the animated walking token when movement is active.
 function renderMovementLayer() {
     let start;
     let end;
@@ -1234,6 +1308,7 @@ function renderMovementLayer() {
     movementTimer = window.setTimeout(finishMovementAnimation, WALK_ANIMATION_MS + 80);
 }
 
+// Close the player-target modal and optionally cancel selection.
 function closeBombModal(shouldCancelItem) {
     const cancelledItem = currentSelectedItem(getCurrentPlayer(gameState));
 
@@ -1251,6 +1326,7 @@ function closeBombModal(shouldCancelItem) {
     }
 }
 
+// Render thief hand targets for keys and items.
 function renderStealTargets(currentPlayer) {
     bombTargetsElement.innerHTML = "";
     bombTargetsElement.setAttribute("aria-label", "Choose item to steal");
@@ -1302,6 +1378,7 @@ function renderStealTargets(currentPlayer) {
     bombConfirmButton.disabled = selectedBombTargetId === null || selectedStealItemType === "";
 }
 
+// Render target buttons for player-targeting items.
 function renderBombTargets() {
     const currentPlayer = getCurrentPlayer(gameState);
     const itemType = currentSelectedItem(currentPlayer);
@@ -1341,6 +1418,7 @@ function renderBombTargets() {
     bombConfirmButton.disabled = selectedBombTargetId === null;
 }
 
+// Open the modal used by player-targeting items.
 function openBombModal() {
     selectedBombTargetId = null;
     selectedStealItemType = "";
@@ -1355,6 +1433,7 @@ function openBombModal() {
     }
 }
 
+// Play an explosion effect on a board tile.
 function playExplosion(tileIndex) {
     window.setTimeout(function () {
         const button = boardButton(tileIndex);
@@ -1374,6 +1453,7 @@ function playExplosion(tileIndex) {
     }, 0);
 }
 
+// Play a monster bite effect on a board tile.
 function playMonsterBite(tileIndex) {
     window.setTimeout(function () {
         const button = boardButton(tileIndex);
@@ -1398,6 +1478,7 @@ function playMonsterBite(tileIndex) {
     }, 0);
 }
 
+// Create the countdown marker above a bomb carrier.
 function makeBombMarker(player) {
     const bomb = document.createElement("span");
 
@@ -1507,6 +1588,7 @@ function renderTurn() {
     effectDetailsElement.textContent = effectTextFromMessage(statusElement.textContent);
 }
 
+// Render stored item buttons for the sidebar inventory.
 function renderInventory(player) {
     inventoryElement.innerHTML = "";
     currentSelectedItem(player);
@@ -1557,12 +1639,14 @@ function renderInventory(player) {
     });
 }
 
+// Find bombs installed by a player that can be detonated.
 function installedBombTargets(panelGame, playerId) {
     return panelGame.players.filter(function (player) {
         return player.bomb !== null && player.bomb.sourcePlayerId === playerId;
     });
 }
 
+// Render early detonation controls for installed bombs.
 function renderDetonateControls(panelGame) {
     const player = getCurrentPlayer(panelGame);
     const targets = installedBombTargets(panelGame, player.id);
@@ -1616,6 +1700,7 @@ function fillSelect(select, values, formatter) {
     }
 }
 
+// Render item-use controls for the current sidebar player.
 function renderItemControls() {
     const panelGame = sidebarGameState();
     const player = getCurrentPlayer(panelGame);
@@ -1645,6 +1730,7 @@ function renderItemControls() {
     noUseButton.textContent = "No Use";
 }
 
+// Render the final victory screen when the game is won.
 function renderVictoryScreen() {
     const hasWinner = gameState.status === "won";
     const winnerId = gameState.winnerId || 1;
@@ -1668,6 +1754,7 @@ function render() {
     renderVictoryScreen();
 }
 
+// Find players who lost HP between two states.
 function hpLossPlayerIds(previousGame, nextGame) {
     return previousGame.players.filter(function (previousPlayer) {
         const nextPlayer = nextGame.players.find(function (player) {
@@ -1680,6 +1767,7 @@ function hpLossPlayerIds(previousGame, nextGame) {
     });
 }
 
+// Find board positions that should show bomb explosions.
 function timedBombExplosionTiles(previousGame, nextGame) {
     const placedBombMatch = nextGame.lastMessage.match(/Timed bomb placed: Player (\d+) has/);
     const explodedTiles = previousGame.players.filter(function (previousPlayer) {
@@ -1713,6 +1801,7 @@ function timedBombExplosionTiles(previousGame, nextGame) {
     return [];
 }
 
+// Find the tile that should show a monster attack effect.
 function monsterAttackTileIndex(nextGame) {
     if (nextGame.lastMessage.indexOf("Monster camp attacked") === -1) {
         return null;
@@ -1726,6 +1815,7 @@ function monsterAttackTileIndex(nextGame) {
     return getCurrentPlayer(gameState).position;
 }
 
+// Keep damaged player feedback visible during handoff.
 function sidebarStateAfterDamage(previousGame, nextGame) {
     return Object.assign({}, previousGame, {
         key: Object.assign({}, nextGame.key),
@@ -1742,6 +1832,7 @@ function sidebarStateAfterDamage(previousGame, nextGame) {
     });
 }
 
+// Find players who were knocked out and reset to spawn.
 function resetPlayerIds(previousGame, nextGame) {
     const resetMessage = nextGame.lastMessage.indexOf("reset to spawn") !== -1 ||
         nextGame.lastMessage.indexOf("reset to their spawn") !== -1 ||
@@ -1761,6 +1852,7 @@ function resetPlayerIds(previousGame, nextGame) {
     });
 }
 
+// Append revival feedback to a rule message.
 function resetFeedbackMessage(playerIds, baseMessage) {
     if (playerIds.length === 0) {
         return baseMessage;
@@ -1780,6 +1872,7 @@ function didSpendAction(previousGame, nextGame) {
             JSON.stringify(previousGame.pendingEvent || null) !== JSON.stringify(nextGame.pendingEvent || null);
 }
 
+// Replace game state and coordinate feedback, modals, and handoff.
 function updateGame(nextGame, shouldShowFeedback) {
     const previousGame = gameState;
     const showFeedback = shouldShowFeedback !== false;
@@ -1838,12 +1931,14 @@ function updateGame(nextGame, shouldShowFeedback) {
     }
 }
 
+// Return the visible board tile description for an index.
 function visibleTileAt(tileIndex) {
     return getVisibleBoard(gameState).find(function (tile) {
         return tile.index === tileIndex;
     });
 }
 
+// Validate board tile selection for item targeting.
 function canChooseItemTargetTile(tileIndex, itemType) {
     const tile = visibleTileAt(tileIndex);
     const isTileSwapItem = itemType === ITEM_TYPES.SWAP_ANY_TILES_WITH_HP_COST;
@@ -1881,6 +1976,7 @@ function canChooseItemTargetTile(tileIndex, itemType) {
     return true;
 }
 
+// Convert an adjacent tile index into a movement direction.
 function directionToAdjacentTile(tileIndex) {
     const player = getCurrentPlayer(gameState);
     const boardSize = gameState.boardSize;
@@ -1906,10 +2002,12 @@ function directionToAdjacentTile(tileIndex) {
     return null;
 }
 
+// Find the DOM button for a board tile.
 function boardButton(tileIndex) {
     return boardElement.querySelector("[data-index=\"" + tileIndex + "\"]");
 }
 
+// Move keyboard focus to a board tile.
 function focusTile(tileIndex) {
     const button = boardButton(tileIndex);
 
@@ -1918,6 +2016,7 @@ function focusTile(tileIndex) {
     }
 }
 
+// Select a tile and update status text.
 function selectTile(tileIndex, shouldFocus) {
     const tile = visibleTileAt(tileIndex);
     const itemType = currentSelectedItem(getCurrentPlayer(gameState));
@@ -1934,6 +2033,7 @@ function selectTile(tileIndex, shouldFocus) {
     }
 }
 
+// Use the current item once its targets are ready.
 function useSelectedItem() {
     const itemType = currentSelectedItem(getCurrentPlayer(gameState));
     const requiredTargets = requiredTileTargetCount(itemType);
@@ -1954,6 +2054,7 @@ function useSelectedItem() {
     }
 }
 
+// Toggle a board tile as an item target.
 function confirmItemTargetTile(tileIndex, itemType) {
     const requiredTargets = requiredTileTargetCount(itemType);
     const targetIndex = itemTargetTiles.indexOf(tileIndex);
@@ -1988,6 +2089,7 @@ function confirmItemTargetTile(tileIndex, itemType) {
     render();
 }
 
+// Resolve the selected tile as reveal, move, or item target.
 function confirmSelectedTile(tileIndex) {
     const itemType = currentSelectedItem(getCurrentPlayer(gameState));
     const tile = visibleTileAt(tileIndex);
@@ -2101,18 +2203,21 @@ function itemTarget(itemType) {
     return {};
 }
 
+// Return whether an event target is a board tile button.
 function isBoardTileElement(element) {
     return element !== null &&
             element.classList !== undefined &&
             element.classList.contains("tile");
 }
 
+// Return whether an event target is a form control.
 function isFormControlElement(element) {
     const tagName = element === null || typeof element.tagName !== "string" ? "" : element.tagName.toLowerCase();
 
     return tagName === "button" || tagName === "input" || tagName === "select";
 }
 
+// Move tile selection in response to arrow keys.
 function selectedTileAfterArrow(key) {
     const boardSize = gameState.boardSize;
     const baseTile = selectedTile === null ? getCurrentPlayer(gameState).position : selectedTile;
@@ -2134,6 +2239,7 @@ function selectedTileAfterArrow(key) {
     return baseTile;
 }
 
+// Create a new game and show the opening guide screen.
 function startPreparedGame() {
     selectedTile = null;
     selectedItemIndex = null;
@@ -2162,6 +2268,7 @@ function startPreparedGame() {
     introStartButton.focus();
 }
 
+// Enter the board after the opening guide screen.
 function enterPreparedGame() {
     if (introScreen.hidden) {
         return;
