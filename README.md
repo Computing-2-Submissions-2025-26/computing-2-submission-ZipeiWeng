@@ -26,6 +26,14 @@ Generate the API documentation:
 npm run docs
 ```
 
+Run syntax lint checks:
+
+```properties
+npm run lint
+```
+
+Note: this template includes an older `jslint` package that cannot parse ES module `import` and `export` syntax. The `lint` script therefore uses Node's syntax checker on the project JavaScript files, while the code keeps the required module structure for the coursework API and browser app.
+
 Open the web app:
 
 - Use the VS Code launch configuration `Run Web App - Firefox`, or

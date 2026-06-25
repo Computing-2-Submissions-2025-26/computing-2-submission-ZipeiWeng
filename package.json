@@ -6,7 +6,8 @@
   "main": "web-app/game.js",
   "scripts": {
     "test": "mocha",
-    "docs": "jsdoc -c jsdoc.json"
+    "docs": "jsdoc -c jsdoc.json",
+    "lint": "node --check web-app/game.js && node --check web-app/main.js && node --check web-app/tests/game.test.js"
   },
   "author": "",
   "license": "ISC",
@@ -15,6 +16,7 @@
   },
   "devDependencies": {
     "docdash": "^2.0.2",
+    "jslint": "^0.12.1",
     "mocha": "^11.7.5"
   }
 }
