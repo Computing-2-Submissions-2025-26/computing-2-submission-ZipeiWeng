@@ -1,9 +1,133 @@
-<!-- In HTML Comments are written like this -->
-<!-- They can all be removed for your apps -->
-<!doctype html> <!-- This first line tells browsers to expect modern standard html 5 -->
-<html lang="en-gb"> <!-- This is indicates the page is written in British English, useful for accessibility -->
-<meta charset="utf-8"> <!-- This indicates how the file is encoded. utf-8 is standard -->
-<title>Your Web-app Title</title> <!-- All pages need a title, this will be displayed in the browser's title bar -->
-<link rel="stylesheet" href="default.css"> <!-- Import style sheet – default.css -->
-<link rel="icon" href="./assets/favicon.png"> <!-- Import 'Favorites Icon' – favicon.png -->
-<script type="module" src="main.js"></script> <!-- Load the main script. Must be type="module". Have only one of these -->
+<!doctype html>
+<html lang="en-gb">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Hidden Key Hunt</title>
+    <link rel="stylesheet" href="default.css">
+    <link rel="icon" href="./assets/favicon.png">
+    <script type="module" src="main.js"></script>
+</head>
+<body>
+    <main id="menu-screen" class="menu-screen">
+        <button type="button" id="menu-start" class="menu-start">Start</button>
+    </main>
+
+    <main id="setup-screen" class="setup-screen" hidden>
+        <section class="setup-panel" aria-labelledby="setup-title">
+            <p class="eyebrow">Prepare party</p>
+            <h1 id="setup-title">Choose players</h1>
+            <label for="setup-player-count">Total players</label>
+            <select id="setup-player-count">
+                <option value="2">2 players</option>
+                <option value="3">3 players</option>
+                <option value="4">4 players</option>
+            </select>
+            <div id="setup-role-picker" class="setup-role-picker" aria-live="polite"></div>
+            <div id="player-setup-list" class="player-setup-list"></div>
+            <p id="setup-status" class="setup-status" aria-live="polite">Player 1 chooses first.</p>
+            <div class="setup-actions">
+                <button type="button" id="setup-back">Back</button>
+                <button type="button" id="setup-start-game" disabled>Start game</button>
+            </div>
+        </section>
+    </main>
+
+    <main id="intro-screen" class="intro-screen" hidden>
+        <button type="button" id="intro-start" class="intro-start" aria-label="Go to the gate and start the game">
+            <span class="intro-gate" aria-hidden="true">&#128682;</span>
+            <span class="intro-title">Go to The Gate!</span>
+        </button>
+    </main>
+
+    <main id="game-screen" class="game-scene" hidden>
+        <button type="button" id="game-menu-button" class="game-menu-button" aria-label="Open pause menu" title="Menu">
+            <span aria-hidden="true">&#9776;</span>
+        </button>
+        <section id="center-prompt" class="center-prompt" role="dialog" aria-modal="true" aria-live="assertive" hidden>
+            <button type="button" id="center-prompt-close" class="center-prompt-close" aria-label="Close event message">&times;</button>
+            <h2 id="center-prompt-title" class="center-prompt-title">Event</h2>
+            <div id="center-prompt-visual" class="center-prompt-visual" aria-hidden="true"></div>
+            <p id="center-prompt-text"></p>
+        </section>
+        <section id="turn-handoff" class="turn-handoff" role="dialog" aria-modal="true" aria-labelledby="turn-handoff-title" hidden>
+            <button type="button" id="turn-handoff-card" class="turn-handoff-card">
+                <span id="turn-handoff-title">Player's turn</span>
+            </button>
+        </section>
+        <section id="pause-menu" class="pause-menu" aria-labelledby="pause-title" hidden>
+            <div class="pause-panel">
+                <h1 id="pause-title">Game paused</h1>
+                <button type="button" id="resume-game">Continue</button>
+                <button type="button" id="restart-game">Restart game</button>
+                <button type="button" id="pause-main-menu">Main menu</button>
+            </div>
+        </section>
+        <section id="bomb-modal" class="bomb-modal" aria-labelledby="bomb-title" role="dialog" aria-modal="true" hidden>
+            <div class="bomb-panel">
+                <h1 id="bomb-title">&#128163;</h1>
+                <div id="bomb-targets" class="bomb-targets" aria-label="Choose bomb target"></div>
+                <label class="visually-hidden" for="bomb-countdown">Bomb countdown</label>
+                <input id="bomb-countdown" type="number" min="1" max="20" value="2" aria-label="Bomb countdown">
+                <div class="bomb-actions">
+                    <button type="button" id="bomb-cancel">&times;</button>
+                    <button type="button" id="bomb-confirm" disabled>Confirm</button>
+                </div>
+            </div>
+        </section>
+        <section id="no-use-modal" class="no-use-modal" aria-labelledby="no-use-title" role="dialog" aria-modal="true" hidden>
+            <div class="no-use-panel">
+                <h1 id="no-use-title">Cancel?</h1>
+                <p id="no-use-text">This event will disappear next turn.</p>
+                <div class="no-use-actions">
+                    <button type="button" id="no-use-back">Back</button>
+                    <button type="button" id="no-use-confirm">Confirm</button>
+                </div>
+            </div>
+        </section>
+        <section id="victory-screen" class="victory-screen" aria-labelledby="victory-title" hidden>
+            <h1 id="victory-title">Winner</h1>
+            <div class="victory-spotlight" aria-hidden="true"></div>
+            <div id="victory-character" class="victory-character character-sprite sprite-front"></div>
+            <div class="victory-actions">
+                <button type="button" id="victory-restart">Restart game</button>
+                <button type="button" id="victory-main-menu">Back to menu</button>
+            </div>
+        </section>
+
+        <section class="board-layer" aria-labelledby="board-title">
+            <h1 id="board-title" class="visually-hidden">Hidden Key Hunt board</h1>
+            <div id="board" class="board" role="group" aria-label="9 by 9 hidden tile board" tabindex="-1"></div>
+            <div id="movement-layer" class="movement-layer" aria-hidden="true"></div>
+        </section>
+
+        <aside class="control-panel" aria-label="Game controls and event information">
+            <section class="game-card current-player-card" aria-labelledby="turn-title">
+                <h2 id="turn-title" class="visually-hidden">Current player</h2>
+                <div class="current-player-summary">
+                    <p id="current-player" class="current-player-token">-</p>
+                    <div class="current-player-text">
+                        <p id="current-player-name" class="current-player-name">Player -</p>
+                        <div id="current-hp" class="heart-row" aria-live="polite"></div>
+                    </div>
+                </div>
+                <p id="current-player-details" class="visually-hidden"></p>
+                <div id="inventory" class="inventory-bar" role="listbox" aria-label="Current player items"></div>
+                <div id="detonate-controls" class="detonate-controls" aria-label="Installed bombs"></div>
+                <div class="player-item-controls">
+                    <p id="item-mode" class="item-mode" hidden></p>
+                    <p id="item-targets" class="item-targets" hidden></p>
+                    <label class="visually-hidden" for="target-player">Target player</label>
+                    <select id="target-player" aria-label="Target player" hidden></select>
+                    <button type="button" id="use-item" hidden>Use</button>
+                    <button type="button" id="no-use" hidden>No Use</button>
+                </div>
+                <p id="selected-tile" class="visually-hidden"></p>
+                <button type="button" id="end-turn" hidden>End turn</button>
+                <p id="status" class="status visually-hidden" aria-live="polite"></p>
+                <p id="effect-details" class="visually-hidden">Ready.</p>
+            </section>
+        </aside>
+    </main>
+</body>
+</html>

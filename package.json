@@ -2,8 +2,12 @@
   "name": "computing-2-submission",
   "type": "module",
   "version": "1.0.0",
-  "description": "",
-  "main": "web-app/Module.js",
+  "description": "Hidden Key Hunt coursework web game",
+  "main": "web-app/game.js",
+  "scripts": {
+    "test": "mocha",
+    "docs": "jsdoc -c jsdoc.json"
+  },
   "author": "",
   "license": "ISC",
   "dependencies": {
