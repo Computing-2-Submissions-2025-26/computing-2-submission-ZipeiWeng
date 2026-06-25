@@ -2,8 +2,12 @@
 // These tests build small game situations and assert player-visible outcomes,
 // avoiding DOM details and avoiding re-implementing the game rules.
 
-import assert from "node:assert/strict";
-import {
+import Assert from "assert";
+import Mocha from "mocha";
+import Game from "journey";
+const assert = Assert.strict;
+const {describe, it} = Mocha;
+const {
     BOARD_SIZE,
     DIRECTIONS,
     EXIT_INDEX,
@@ -21,20 +25,30 @@ import {
     moveCurrentPlayer,
     revealTile,
     useCurrentPlayerItem
-} from "../game.js";
+} = Game;
+
+let copyPlayer;
+let withPlayer;
+let withKey;
+let withTile;
+let makeGame;
 
 // Test fixtures copy state instead of mutating the real game object. This keeps
 // the immutability tests meaningful and makes each scenario easy to read.
-function copyPlayer(player, patch) {
+copyPlayer = function(player, patch) {
+    "use strict";
+    const temporaryItems = player.temporaryItems || [];
+
     return Object.assign({}, player, {
         items: player.items.slice(),
-        temporaryItems: (player.temporaryItems || []).slice(),
+        temporaryItems: temporaryItems.slice(),
         bomb: player.bomb === null ? null : Object.assign({}, player.bomb)
     }, patch || {});
-}
+};
 
 // Return a test game with one patched player.
-function withPlayer(game, playerId, patch) {
+withPlayer = function(game, playerId, patch) {
+    "use strict";
     return Object.assign({}, game, {
         players: game.players.map(function (player) {
             if (player.id === playerId) {
@@ -43,17 +57,19 @@ function withPlayer(game, playerId, patch) {
             return copyPlayer(player);
         })
     });
-}
+};
 
 // Return a test game with patched key state.
-function withKey(game, patch) {
+withKey = function(game, patch) {
+    "use strict";
     return Object.assign({}, game, {
         key: Object.assign({}, game.key, patch)
     });
-}
+};
 
 // Return a test game with one patched tile.
-function withTile(game, index, patch) {
+withTile = function(game, index, patch) {
+    "use strict";
     return Object.assign({}, game, {
         tiles: game.tiles.map(function (tile) {
             if (tile.index === index) {
@@ -62,18 +78,20 @@ function withTile(game, index, patch) {
             return Object.assign({}, tile);
         })
     });
-}
+};
 
 // Most tests use a fixed key position so random choices do not make behaviour
 // checks flaky.
-function makeGame(options) {
+makeGame = function(options) {
+    "use strict";
     return createGame(2, Object.assign({
         keyPosition: 10,
         keyRevealNumber: 8
     }, options || {}));
-}
+};
 
 describe("Journey game module", function () {
+    "use strict";
     it("createGame creates a 9x9 board", function () {
         const game = makeGame();
 
@@ -110,7 +128,8 @@ describe("Journey game module", function () {
     });
 
     it("randomises the forced key reveal inside the first eight reveals", function () {
-        const revealNumbers = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12].map(function (seed) {
+        const seeds = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12];
+        const revealNumbers = seeds.map(function (seed) {
             return createGame(2, {seed, keyPosition: 10}).keyRevealNumber;
         });
 

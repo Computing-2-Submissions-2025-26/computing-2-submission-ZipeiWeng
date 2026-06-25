@@ -1,13 +1,14 @@
 {
-  "name": "computing-2-submission",
+  "name": "journey",
   "type": "module",
   "version": "1.0.0",
   "description": "Journey coursework web game",
   "main": "web-app/game.js",
+  "exports": "./web-app/game.js",
   "scripts": {
     "test": "mocha",
     "docs": "jsdoc -c jsdoc.json",
-    "lint": "node --check web-app/game.js && node --check web-app/main.js && node --check web-app/tests/game.test.js"
+    "lint": "node --no-warnings node_modules/jslint/bin/jslint.js --edition=latest --es6 --browser --node --white --vars --unparam --bitwise --plusplus --nomen --regexp --todo web-app/game.js web-app/main.js web-app/tests/game.test.js"
   },
   "author": "",
   "license": "ISC",

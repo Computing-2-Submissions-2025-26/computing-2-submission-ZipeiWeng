@@ -2,10 +2,95 @@
 // This module is deliberately DOM-free: it only receives game state data and
 // returns new game state data for the browser UI or the unit tests to use.
 
+let isSpawnIndex;
+let isProtectedTile;
+let makeSeed;
+let nextRandomValue;
+let clonePlayer;
+let cloneTile;
+let cloneGame;
+let getPlayer;
+let getCurrentMutablePlayer;
+let getTile;
+let setMessage;
+let openedTypeCount;
+let isEventOrItemTileType;
+let spatialSpreadMultiplier;
+let dynamicTileWeight;
+let recordRevealedType;
+let chooseWeightedTileType;
+let chooseKeyPosition;
+let chooseKeyRevealNumber;
+let makeTiles;
+let makePlayers;
+let normalizeOptions;
+let copyPlannedContents;
+let chooseTileContent;
+let addItemToPlayer;
+let isTemporaryEventItem;
+let hasTemporaryItem;
+let clearTemporaryEvents;
+let addTemporaryEventToPlayer;
+let readableItemName;
+let removeOneItem;
+let chooseNoMoveRewardItem;
+let resolveNoMoveReward;
+let killPlayer;
+let damagePlayer;
+let pickUpVisibleKey;
+let stealKeyAtCurrentPosition;
+let passBombFromMover;
+let checkWin;
+let consumeTile;
+let tileEffectDescription;
+let collectItemFromTile;
+let collectTemporaryEventFromTile;
+let resolveTileEffectAt;
+let resolveSteppedTile;
+let beginCurrentTurn;
+let timedBombDamageForDistance;
+let destroyWallTile;
+let destroyBlastWalls;
+let applyTimedBombExplosions;
+let tickBombForPlayer;
+let clearPendingEventForPlayer;
+let advanceTurnCursor;
+let skipRestrictedTurns;
+let turnStartMessage;
+let skipRestrictedCurrentTurn;
+let finishAction;
+let failedAction;
+let getTargetPlayerId;
+let getCountdown;
+let getTilePair;
+let getTileIndexTarget;
+let getTargetItemType;
+let canSwapTile;
+let canRemoteTriggerTile;
+let tileHasPlayer;
+let swapTileContents;
+let revealBlastTile;
+let revealBlastNeighbours;
+let revealMine;
+let createGame;
+let getCurrentPlayer;
+let getCoordinates;
+let getIndex;
+let getManhattanDistance;
+let getNextPosition;
+let moveCurrentPlayer;
+let revealTile;
+let useCurrentPlayerItem;
+let detonateCurrentPlayerBomb;
+let discardCurrentPlayerItem;
+let endTurn;
+let isGameWon;
+let getVisibleBoard;
+
 // Public board constants used by both the game module and UI rendering.
-export const BOARD_SIZE = 9;
-export const EXIT_INDEX = 40;
-export const SPAWN_POSITIONS = Object.freeze([0, 8, 72, 80]);
+const BOARD_SIZE = 9;
+const EXIT_INDEX = 40;
+const SPAWN_POSITIONS = Object.freeze([0, 8, 72, 80]);
 const KEY_REVEAL_LIMIT = 8;
 const MINE_BLAST_RADIUS = 1;
 const TIMED_BOMB_BLAST_RADIUS = 2;
@@ -14,7 +99,7 @@ const ADJACENT_EVENT_WEIGHT_MULTIPLIER = 0.35;
 const NEARBY_EVENT_WEIGHT_MULTIPLIER = 0.7;
 
 // Directions are strings so UI controls and tests can pass readable commands.
-export const DIRECTIONS = Object.freeze({
+const DIRECTIONS = Object.freeze({
     UP: "up",
     DOWN: "down",
     LEFT: "left",
@@ -22,7 +107,7 @@ export const DIRECTIONS = Object.freeze({
 });
 
 // Tile types describe revealed board content. Hidden tiles keep type === null.
-export const TILE_TYPES = Object.freeze({
+const TILE_TYPES = Object.freeze({
     EXIT: "exit",
     WALL: "wall",
     TIMED_BOMB_PACK: "timedBombPack",
@@ -43,7 +128,7 @@ export const TILE_TYPES = Object.freeze({
 // The magnet, costly any-tile swap, thief hand, remote trigger, and bomb
 // defuser are stored items. The other usable effects are temporary events:
 // when a player steps onto them, they must use or dismiss the effect.
-export const ITEM_TYPES = Object.freeze({
+const ITEM_TYPES = Object.freeze({
     TIMED_BOMB_PACK: "timedBombPack",
     RESTRICT_MOVE: "restrictMove",
     SWAP_PLAYER: "swapPlayer",
@@ -91,39 +176,45 @@ const RANDOM_TILE_WEIGHTS = Object.freeze([
 ]);
 
 // Return whether a tile index is one of the fixed player spawn tiles.
-function isSpawnIndex(index) {
+isSpawnIndex = function(index) {
+    "use strict";
     return SPAWN_POSITIONS.indexOf(index) !== -1;
-}
+};
 
 // Return whether a tile should never receive random hidden content.
-function isProtectedTile(index) {
+isProtectedTile = function(index) {
+    "use strict";
     return index === EXIT_INDEX || isSpawnIndex(index);
-}
+};
 
 // A tiny seeded generator keeps random setup deterministic for unit tests.
-function makeSeed(seed) {
+makeSeed = function(seed) {
+    "use strict";
     if (Number.isInteger(seed)) {
         return seed >>> 0;
     }
     return 123456789;
-}
+};
 
 // Advance the deterministic random generator by one step.
-function nextRandomValue(seed) {
+nextRandomValue = function(seed) {
+    "use strict";
     const nextSeed = (seed * 1664525 + 1013904223) >>> 0;
     return {
         seed: nextSeed,
         value: nextSeed / 4294967296
     };
-}
+};
 
 // Cloning is the core immutability guard. Public rule functions clone first,
 // then apply changes to the clone, so callers keep their original state object.
-function clonePlayer(player) {
+clonePlayer = function(player) {
+    "use strict";
     const bomb = player.bomb === null ? null : {
         turnsLeft: player.bomb.turnsLeft,
         sourcePlayerId: player.bomb.sourcePlayerId
     };
+    const temporaryItems = player.temporaryItems || [];
 
     return {
         id: player.id,
@@ -133,27 +224,29 @@ function clonePlayer(player) {
         maxHp: player.maxHp,
         hasKey: player.hasKey,
         items: player.items.slice(),
-        temporaryItems: (player.temporaryItems || []).slice(),
+        temporaryItems: temporaryItems.slice(),
         bomb,
         restrictedNextTurn: player.restrictedNextTurn,
         nextTurnActionPower: player.nextTurnActionPower,
         turnsWithoutMove: player.turnsWithoutMove || 0,
         movedThisTurn: Boolean(player.movedThisTurn)
     };
-}
+};
 
 // Copy one tile so rule updates never mutate the old board.
-function cloneTile(tile) {
+cloneTile = function(tile) {
+    "use strict";
     return {
         index: tile.index,
         type: tile.type,
         revealed: tile.revealed,
         consumed: tile.consumed
     };
-}
+};
 
 // Copy the full game state before applying rule changes.
-function cloneGame(gameState) {
+cloneGame = function(gameState) {
+    "use strict";
     return {
         boardSize: gameState.boardSize,
         exitIndex: gameState.exitIndex,
@@ -162,7 +255,7 @@ function cloneGame(gameState) {
         remainingActions: gameState.remainingActions,
         revealCount: gameState.revealCount || 0,
         keyRevealNumber: gameState.keyRevealNumber || KEY_REVEAL_LIMIT,
-        pendingEvent: gameState.pendingEvent === null || gameState.pendingEvent === undefined ? null : {
+        pendingEvent: (gameState.pendingEvent === null || gameState.pendingEvent === undefined) ? null : {
             playerId: gameState.pendingEvent.playerId,
             itemType: gameState.pendingEvent.itemType
         },
@@ -181,46 +274,53 @@ function cloneGame(gameState) {
         queuedTileContents: gameState.queuedTileContents.slice(),
         lastMessage: gameState.lastMessage
     };
-}
+};
 
 // The helpers below work on a cloned game object during one rule resolution.
-function getPlayer(game, playerId) {
+getPlayer = function(game, playerId) {
+    "use strict";
     return game.players.find(function (player) {
         return player.id === playerId;
     });
-}
+};
 
 // Return the active player inside a cloned game state.
-function getCurrentMutablePlayer(game) {
+getCurrentMutablePlayer = function(game) {
+    "use strict";
     return game.players[game.currentPlayerIndex];
-}
+};
 
 // Return the mutable tile object at a board index.
-function getTile(game, tileIndex) {
+getTile = function(game, tileIndex) {
+    "use strict";
     return game.tiles[tileIndex];
-}
+};
 
 // Store the latest player-facing rule message on the game state.
-function setMessage(game, message) {
+setMessage = function(game, message) {
+    "use strict";
     game.lastMessage = message;
     return game;
-}
+};
 
 // Read how many times a tile type has already appeared.
-function openedTypeCount(game, tileType) {
+openedTypeCount = function(game, tileType) {
+    "use strict";
     return game.revealedTypeCounts[tileType] || 0;
-}
+};
 
 // Return whether a tile type should be spread out spatially.
-function isEventOrItemTileType(tileType) {
+isEventOrItemTileType = function(tileType) {
+    "use strict";
     return tileType !== null &&
         tileType !== TILE_TYPES.EMPTY &&
         tileType !== TILE_TYPES.WALL &&
         tileType !== TILE_TYPES.EXIT;
-}
+};
 
 // Reduce event/item weight when similar content is nearby.
-function spatialSpreadMultiplier(game, tileIndex, tileType) {
+spatialSpreadMultiplier = function(game, tileIndex, tileType) {
+    "use strict";
     let multiplier = 1;
 
     if (!isEventOrItemTileType(tileType) || !Number.isInteger(tileIndex)) {
@@ -243,26 +343,29 @@ function spatialSpreadMultiplier(game, tileIndex, tileType) {
     });
 
     return multiplier;
-}
+};
 
 // Once a type has appeared, its later reveal chance is reduced but not removed.
 // Nearby event/item tiles also reduce new event/item weights, so special tiles
 // tend to spread out without becoming predictable or impossible.
-function dynamicTileWeight(game, entry, tileIndex) {
+dynamicTileWeight = function(game, entry, tileIndex) {
+    "use strict";
     return entry.weight *
         spatialSpreadMultiplier(game, tileIndex, entry.type) /
         (openedTypeCount(game, entry.type) + 1);
-}
+};
 
 // Track a newly revealed tile type for future weighting.
-function recordRevealedType(game, tileType) {
+recordRevealedType = function(game, tileType) {
+    "use strict";
     if (tileType !== null && tileType !== TILE_TYPES.EXIT) {
         game.revealedTypeCounts[tileType] = openedTypeCount(game, tileType) + 1;
     }
-}
+};
 
 // Choose hidden tile content using the current dynamic weights.
-function chooseWeightedTileType(game, tileIndex) {
+chooseWeightedTileType = function(game, tileIndex) {
+    "use strict";
     const totalWeight = RANDOM_TILE_WEIGHTS.reduce(function (total, entry) {
         return total + dynamicTileWeight(game, entry, tileIndex);
     }, 0);
@@ -280,10 +383,11 @@ function chooseWeightedTileType(game, tileIndex) {
     }
 
     return TILE_TYPES.EMPTY;
-}
+};
 
 // The key is placed once at game creation and never appears as random content.
-function chooseKeyPosition(playerCount, options) {
+chooseKeyPosition = function(playerCount, options) {
+    "use strict";
     const legalPositions = [];
     let index = 0;
 
@@ -309,10 +413,11 @@ function chooseKeyPosition(playerCount, options) {
         position: legalPositions[Math.floor(random.value * legalPositions.length)],
         seed: random.seed
     };
-}
+};
 
 // Choose which early reveal will force the key to appear.
-function chooseKeyRevealNumber(playerCount, options) {
+chooseKeyRevealNumber = function(playerCount, options) {
+    "use strict";
     const queuedReveal = options.keyRevealNumber;
 
     if (Number.isInteger(queuedReveal)) {
@@ -324,10 +429,11 @@ function chooseKeyRevealNumber(playerCount, options) {
 
     const random = nextRandomValue(makeSeed(options.seed) + playerCount + 404);
     return Math.floor(random.value * KEY_REVEAL_LIMIT) + 1;
-}
+};
 
 // Exit and spawn tiles begin revealed and safe; all other tiles start hidden.
-function makeTiles() {
+makeTiles = function() {
+    "use strict";
     const tiles = [];
     let index = 0;
 
@@ -358,10 +464,11 @@ function makeTiles() {
     });
 
     return tiles;
-}
+};
 
 // Each player starts at their assigned corner with the same survival stats.
-function makePlayers(playerCount) {
+makePlayers = function(playerCount) {
+    "use strict";
     return SPAWN_POSITIONS.slice(0, playerCount).map(function (spawnPosition, index) {
         return {
             id: index + 1,
@@ -379,25 +486,28 @@ function makePlayers(playerCount) {
             movedThisTurn: false
         };
     });
-}
+};
 
 // Protect optional setup data from missing or invalid input.
-function normalizeOptions(options) {
+normalizeOptions = function(options) {
+    "use strict";
     if (options === undefined) {
         return {};
     }
     return options;
-}
+};
 
 // Copy deterministic tile overrides supplied by tests or setup.
-function copyPlannedContents(options) {
+copyPlannedContents = function(options) {
+    "use strict";
     const contents = options.tileContentsByIndex || options.tileContents || {};
     return Object.assign({}, contents);
-}
+};
 
 // Non-key tile content is assigned lazily at reveal time. Tests can inject
 // exact tile contents to avoid depending on random outcomes.
-function chooseTileContent(game, tileIndex) {
+chooseTileContent = function(game, tileIndex) {
+    "use strict";
     const key = String(tileIndex);
 
     if (Object.prototype.hasOwnProperty.call(game.plannedTileContents, key)) {
@@ -409,10 +519,11 @@ function chooseTileContent(game, tileIndex) {
     }
 
     return chooseWeightedTileType(game, tileIndex);
-}
+};
 
 // Add an item only if the player does not already have it.
-function addItemToPlayer(game, playerId, itemType) {
+addItemToPlayer = function(game, playerId, itemType) {
+    "use strict";
     const player = getPlayer(game, playerId);
 
     if (player.items.indexOf(itemType) !== -1) {
@@ -421,47 +532,55 @@ function addItemToPlayer(game, playerId, itemType) {
 
     player.items.push(itemType);
     return true;
-}
+};
 
 // Return whether an item must be used or dismissed immediately.
-function isTemporaryEventItem(itemType) {
+isTemporaryEventItem = function(itemType) {
+    "use strict";
     return TEMPORARY_EVENT_TYPES.indexOf(itemType) !== -1;
-}
+};
 
 // Return whether a player holds a temporary event item.
-function hasTemporaryItem(player, itemType) {
-    return (player.temporaryItems || []).indexOf(itemType) !== -1;
-}
+hasTemporaryItem = function(player, itemType) {
+    "use strict";
+    const temporaryItems = player.temporaryItems || [];
+    return temporaryItems.indexOf(itemType) !== -1;
+};
 
 // Remove all current-turn-only items from a player.
-function clearTemporaryEvents(player) {
-    const temporaryItems = (player.temporaryItems || []).slice();
+clearTemporaryEvents = function(player) {
+    "use strict";
+    const playerTemporaryItems = player.temporaryItems || [];
+    const temporaryItems = playerTemporaryItems.slice();
 
     temporaryItems.forEach(function (itemType) {
         removeOneItem(player, itemType);
     });
     player.temporaryItems = [];
-}
+};
 
 // Give a player a temporary event and mark it as pending.
-function addTemporaryEventToPlayer(game, playerId, itemType) {
+addTemporaryEventToPlayer = function(game, playerId, itemType) {
+    "use strict";
     const player = getPlayer(game, playerId);
 
     clearTemporaryEvents(player);
     player.items.push(itemType);
     player.temporaryItems.push(itemType);
-}
+};
 
 // Convert an internal item id into lower-case display text.
-function readableItemName(itemType) {
+readableItemName = function(itemType) {
+    "use strict";
     if (itemType === "") {
         return "no extra";
     }
     return itemType.replace(/([A-Z])/g, " $1").toLowerCase();
-}
+};
 
 // Remove one item from inventory and temporary item tracking.
-function removeOneItem(player, itemType) {
+removeOneItem = function(player, itemType) {
+    "use strict";
     const itemIndex = player.items.indexOf(itemType);
 
     if (itemIndex === -1) {
@@ -477,10 +596,11 @@ function removeOneItem(player, itemType) {
         }
     }
     return true;
-}
+};
 
 // Choose a random no-move reward the player does not own.
-function chooseNoMoveRewardItem(game, player) {
+chooseNoMoveRewardItem = function(game, player) {
+    "use strict";
     const availableItems = NO_MOVE_REWARD_ITEMS.filter(function (itemType) {
         return player.items.indexOf(itemType) === -1;
     });
@@ -491,12 +611,13 @@ function chooseNoMoveRewardItem(game, player) {
         return "";
     }
     return availableItems[Math.floor(random.value * availableItems.length)];
-}
+};
 
 // If a player keeps ending their own turns without a real move action, give a
 // small random tool so they can break out of blocked routes. Swap-player and
 // timed-bomb rewards are stored items here, unlike their step-on event version.
-function resolveNoMoveReward(game, playerId) {
+resolveNoMoveReward = function(game, playerId) {
+    "use strict";
     const player = getPlayer(game, playerId);
     let rewardItem;
 
@@ -522,10 +643,11 @@ function resolveNoMoveReward(game, playerId) {
 
     addItemToPlayer(game, playerId, rewardItem);
     return "Player " + playerId + " received " + readableItemName(rewardItem) + " after 5 turns without moving.";
-}
+};
 
 // Death is a reset, not elimination. The key drops before the player respawns.
-function killPlayer(game, playerId) {
+killPlayer = function(game, playerId) {
+    "use strict";
     const player = getPlayer(game, playerId);
     const deathPosition = player.position;
 
@@ -544,20 +666,22 @@ function killPlayer(game, playerId) {
     player.turnsWithoutMove = 0;
     player.movedThisTurn = false;
     clearTemporaryEvents(player);
-}
+};
 
 // Apply HP loss and knock out the player if HP reaches zero.
-function damagePlayer(game, playerId, amount) {
+damagePlayer = function(game, playerId, amount) {
+    "use strict";
     const player = getPlayer(game, playerId);
     player.hp -= amount;
 
     if (player.hp <= 0) {
         killPlayer(game, playerId);
     }
-}
+};
 
 // A key on the ground can only be collected after it has become visible.
-function pickUpVisibleKey(game, playerId) {
+pickUpVisibleKey = function(game, playerId) {
+    "use strict";
     const player = getPlayer(game, playerId);
 
     if (game.key.holderPlayerId === null && game.key.isVisible && game.key.position === player.position) {
@@ -567,11 +691,12 @@ function pickUpVisibleKey(game, playerId) {
     }
 
     return false;
-}
+};
 
 // Moving onto the key holder transfers the key only. It never creates a magnet;
 // magnets must be collected from magnet tiles.
-function stealKeyAtCurrentPosition(game, playerId) {
+stealKeyAtCurrentPosition = function(game, playerId) {
+    "use strict";
     const player = getPlayer(game, playerId);
     const holderId = game.key.holderPlayerId;
 
@@ -590,10 +715,11 @@ function stealKeyAtCurrentPosition(game, playerId) {
     game.key.position = player.position;
     game.key.isVisible = true;
     return true;
-}
+};
 
 // Bombs pass only when the bomb carrier is the player who moved onto someone.
-function passBombFromMover(game, playerId) {
+passBombFromMover = function(game, playerId) {
+    "use strict";
     const mover = getPlayer(game, playerId);
 
     if (mover.bomb === null) {
@@ -614,10 +740,11 @@ function passBombFromMover(game, playerId) {
     };
     mover.bomb = null;
     return true;
-}
+};
 
 // Mark the game as won when a key holder reaches the exit.
-function checkWin(game, playerId) {
+checkWin = function(game, playerId) {
+    "use strict";
     const player = getPlayer(game, playerId);
 
     if (player.hasKey && player.position === game.exitIndex) {
@@ -629,18 +756,20 @@ function checkWin(game, playerId) {
     }
 
     return false;
-}
+};
 
 // Turn a used event or item tile into an empty revealed tile.
-function consumeTile(game, tileIndex) {
+consumeTile = function(game, tileIndex) {
+    "use strict";
     const tile = getTile(game, tileIndex);
     tile.type = TILE_TYPES.EMPTY;
     tile.revealed = true;
     tile.consumed = true;
-}
+};
 
 // Describe the effect shown when a tile is revealed.
-function tileEffectDescription(tileType) {
+tileEffectDescription = function(tileType) {
+    "use strict";
     if (tileType === TILE_TYPES.WALL) {
         return "Wall revealed: this tile blocks movement.";
     }
@@ -681,11 +810,12 @@ function tileEffectDescription(tileType) {
         return "Bomb defuser revealed: collect it to remove a timed bomb from yourself.";
     }
     return "Empty tile revealed: this tile is safe.";
-}
+};
 
 // Tile effects are step-on effects. Hidden tiles cannot be entered in this
 // version of the game, so players must reveal a route before moving through it.
-function collectItemFromTile(game, playerId, tile, itemType, collectedMessage) {
+collectItemFromTile = function(game, playerId, tile, itemType, collectedMessage) {
+    "use strict";
     const wasAdded = addItemToPlayer(game, playerId, itemType);
 
     consumeTile(game, tile.index);
@@ -693,10 +823,11 @@ function collectItemFromTile(game, playerId, tile, itemType, collectedMessage) {
         return collectedMessage;
     }
     return "Duplicate item blocked: this player already has " + readableItemName(itemType) + ".";
-}
+};
 
 // Collect a current-turn event from a stepped-on tile.
-function collectTemporaryEventFromTile(game, playerId, tile, itemType, collectedMessage) {
+collectTemporaryEventFromTile = function(game, playerId, tile, itemType, collectedMessage) {
+    "use strict";
     addTemporaryEventToPlayer(game, playerId, itemType);
     consumeTile(game, tile.index);
     game.pendingEvent = {
@@ -704,10 +835,11 @@ function collectTemporaryEventFromTile(game, playerId, tile, itemType, collected
         itemType
     };
     return collectedMessage;
-}
+};
 
 // Apply the effect for the tile occupied by a player.
-function resolveTileEffectAt(game, playerId, tileIndex) {
+resolveTileEffectAt = function(game, playerId, tileIndex) {
+    "use strict";
     const player = getPlayer(game, playerId);
     const tile = getTile(game, tileIndex);
 
@@ -717,11 +849,13 @@ function resolveTileEffectAt(game, playerId, tileIndex) {
 
     if (tile.type === TILE_TYPES.TIMED_BOMB_PACK) {
         return collectTemporaryEventFromTile(game, playerId, tile, ITEM_TYPES.TIMED_BOMB_PACK, "Timed bomb event triggered: place a countdown bomb on a player.");
-    } else if (tile.type === TILE_TYPES.FULL_HEAL) {
+    }
+    if (tile.type === TILE_TYPES.FULL_HEAL) {
         player.hp = player.maxHp;
         consumeTile(game, tile.index);
         return "Full heal triggered: the player is restored to maximum HP.";
-    } else if (tile.type === TILE_TYPES.MONSTER_CAMP) {
+    }
+    if (tile.type === TILE_TYPES.MONSTER_CAMP) {
         const wasKnockedOut = player.hp <= 1;
 
         damagePlayer(game, playerId, 1);
@@ -730,45 +864,56 @@ function resolveTileEffectAt(game, playerId, tileIndex) {
             return "Monster camp attacked: Player " + playerId + " lost 1 HP and was reset to spawn.";
         }
         return "Monster camp attacked: Player " + playerId + " lost 1 HP.";
-    } else if (tile.type === TILE_TYPES.RESTRICT_MOVE) {
+    }
+    if (tile.type === TILE_TYPES.RESTRICT_MOVE) {
         return collectTemporaryEventFromTile(game, playerId, tile, ITEM_TYPES.RESTRICT_MOVE, "Restrict move event triggered: make one player skip their next turn.");
-    } else if (tile.type === TILE_TYPES.SWAP_PLAYER) {
+    }
+    if (tile.type === TILE_TYPES.SWAP_PLAYER) {
         return collectTemporaryEventFromTile(game, playerId, tile, ITEM_TYPES.SWAP_PLAYER, "Swap player event triggered: swap positions with another player.");
-    } else if (tile.type === TILE_TYPES.ACTION_BOOST) {
+    }
+    if (tile.type === TILE_TYPES.ACTION_BOOST) {
         game.remainingActions = Math.max(game.remainingActions, 3);
         consumeTile(game, tile.index);
         return "Action boost triggered: gained 2 more actions.";
-    } else if (tile.type === TILE_TYPES.SWAP_ANY_TILES_WITH_HP_COST) {
+    }
+    if (tile.type === TILE_TYPES.SWAP_ANY_TILES_WITH_HP_COST) {
         return collectItemFromTile(game, playerId, tile, ITEM_TYPES.SWAP_ANY_TILES_WITH_HP_COST, "Costly swap collected: use it later to swap any two allowed tiles for 1 HP.");
-    } else if (tile.type === TILE_TYPES.MAGNET) {
+    }
+    if (tile.type === TILE_TYPES.MAGNET) {
         return collectItemFromTile(game, playerId, tile, ITEM_TYPES.MAGNET, "Magnet collected: use it to pull or steal a visible key within distance 3.");
-    } else if (tile.type === TILE_TYPES.THIEF_HAND) {
+    }
+    if (tile.type === TILE_TYPES.THIEF_HAND) {
         return collectItemFromTile(game, playerId, tile, ITEM_TYPES.THIEF_HAND, "Thief hand collected: use it later to steal one item from another player.");
-    } else if (tile.type === TILE_TYPES.REMOTE_TRIGGER) {
+    }
+    if (tile.type === TILE_TYPES.REMOTE_TRIGGER) {
         return collectItemFromTile(game, playerId, tile, ITEM_TYPES.REMOTE_TRIGGER, "Remote trigger collected: use it later to trigger a nearby revealed event or item.");
-    } else if (tile.type === TILE_TYPES.BOMB_DEFUSER) {
+    }
+    if (tile.type === TILE_TYPES.BOMB_DEFUSER) {
         return collectItemFromTile(game, playerId, tile, ITEM_TYPES.BOMB_DEFUSER, "Bomb defuser collected: use it later to remove a timed bomb from yourself.");
     }
 
     return "";
-}
+};
 
 // Resolve any tile effect at the player's current position.
-function resolveSteppedTile(game, playerId) {
+resolveSteppedTile = function(game, playerId) {
+    "use strict";
     return resolveTileEffectAt(game, playerId, getPlayer(game, playerId).position);
-}
+};
 
 // Prepare action count for the active player's new turn.
-function beginCurrentTurn(game) {
+beginCurrentTurn = function(game) {
+    "use strict";
     const player = getCurrentMutablePlayer(game);
     clearTemporaryEvents(player);
     game.remainingActions = player.nextTurnActionPower;
     player.nextTurnActionPower = 1;
     player.movedThisTurn = false;
-}
+};
 
 // Return bomb damage from Manhattan distance.
-function timedBombDamageForDistance(distance) {
+timedBombDamageForDistance = function(distance) {
+    "use strict";
     if (distance === 0) {
         return "kill";
     }
@@ -779,19 +924,21 @@ function timedBombDamageForDistance(distance) {
         return 1;
     }
     return 0;
-}
+};
 
 // Convert one revealed wall into an empty tile.
-function destroyWallTile(game, tileIndex) {
+destroyWallTile = function(game, tileIndex) {
+    "use strict";
     const tile = getTile(game, tileIndex);
 
     if (tile.type === TILE_TYPES.WALL) {
         consumeTile(game, tileIndex);
     }
-}
+};
 
 // Destroy revealed walls inside a blast radius.
-function destroyBlastWalls(game, tileIndex) {
+destroyBlastWalls = function(game, tileIndex) {
+    "use strict";
     let index = 0;
 
     while (index < game.tiles.length) {
@@ -800,10 +947,11 @@ function destroyBlastWalls(game, tileIndex) {
         }
         index += 1;
     }
-}
+};
 
 // Resolve one or more timed bomb explosions.
-function applyTimedBombExplosions(game, explosions) {
+applyTimedBombExplosions = function(game, explosions) {
+    "use strict";
     const playerPositions = game.players.map(function (player) {
         return {
             id: player.id,
@@ -865,11 +1013,12 @@ function applyTimedBombExplosions(game, explosions) {
         return;
     }
     setMessage(game, "Timed bomb exploded: blast damage resolved.");
-}
+};
 
 // A timed bomb follows its current carrier. Its countdown decreases only when
 // that carrier's own turn ends or is skipped after the bomb was installed.
-function tickBombForPlayer(game, playerId) {
+tickBombForPlayer = function(game, playerId) {
+    "use strict";
     const previousMessage = game.lastMessage;
     const player = getPlayer(game, playerId);
 
@@ -890,17 +1039,19 @@ function tickBombForPlayer(game, playerId) {
         return game.lastMessage;
     }
     return "";
-}
+};
 
 // Clear a pending event owned by one player.
-function clearPendingEventForPlayer(game, playerId) {
+clearPendingEventForPlayer = function(game, playerId) {
+    "use strict";
     if (game.pendingEvent !== null && game.pendingEvent.playerId === playerId) {
         game.pendingEvent = null;
     }
-}
+};
 
 // Move to the next player and resolve end-of-turn effects.
-function advanceTurnCursor(game) {
+advanceTurnCursor = function(game) {
+    "use strict";
     const endingPlayerId = getCurrentMutablePlayer(game).id;
     const wasLastPlayer = game.currentPlayerIndex === game.players.length - 1;
     const rewardMessage = resolveNoMoveReward(game, endingPlayerId);
@@ -911,13 +1062,15 @@ function advanceTurnCursor(game) {
     }
 
     game.currentPlayerIndex = wasLastPlayer ? 0 : game.currentPlayerIndex + 1;
-    return [rewardMessage, bombMessage].filter(function (message) {
+    const messages = [rewardMessage, bombMessage];
+    return messages.filter(function (message) {
         return message !== "";
     }).join(" ");
-}
+};
 
 // Skip any players whose next turn is restricted.
-function skipRestrictedTurns(game) {
+skipRestrictedTurns = function(game) {
+    "use strict";
     const skippedPlayerIds = [];
     const bombMessages = [];
     let guard = 0;
@@ -941,10 +1094,11 @@ function skipRestrictedTurns(game) {
         skippedPlayerIds,
         bombMessages
     };
-}
+};
 
 // Build the message shown at the start of a turn.
-function turnStartMessage(game, skippedPlayerIds, bombMessages) {
+turnStartMessage = function(game, skippedPlayerIds, bombMessages) {
+    "use strict";
     const pieces = bombMessages.slice();
 
     if (skippedPlayerIds.length > 0) {
@@ -952,10 +1106,11 @@ function turnStartMessage(game, skippedPlayerIds, bombMessages) {
     }
     pieces.push("Player " + getCurrentMutablePlayer(game).id + " begins round " + game.roundNumber + ".");
     return pieces.join(" ");
-}
+};
 
 // Skip the active player when their restriction triggers.
-function skipRestrictedCurrentTurn(gameState) {
+skipRestrictedCurrentTurn = function(gameState) {
+    "use strict";
     const game = cloneGame(gameState);
     const skippedPlayer = getCurrentMutablePlayer(game);
     const skippedPlayerIds = [skippedPlayer.id];
@@ -973,11 +1128,12 @@ function skipRestrictedCurrentTurn(gameState) {
     beginCurrentTurn(game);
     setMessage(game, turnStartMessage(game, skippedPlayerIds.concat(laterSkips.skippedPlayerIds), bombMessages.concat(laterSkips.bombMessages)));
     return game;
-}
+};
 
 // Every successful move, reveal, or item use spends one action. A turn ends
 // automatically when the active player has no actions left.
-function finishAction(game) {
+finishAction = function(game) {
+    "use strict";
     const actionMessage = game.lastMessage;
 
     if (game.status === "won") {
@@ -998,17 +1154,19 @@ function finishAction(game) {
     }
 
     return game;
-}
+};
 
 // Failed actions still return a fresh state object with a useful message, but
 // they do not spend an action point.
-function failedAction(gameState, message) {
+failedAction = function(gameState, message) {
+    "use strict";
     return setMessage(cloneGame(gameState), message);
-}
+};
 
 // Item targets come from the UI as small objects, but tests may pass simpler
 // numbers or arrays. These adapters keep the public API convenient.
-function getTargetPlayerId(target) {
+getTargetPlayerId = function(target) {
+    "use strict";
     if (typeof target === "number") {
         return target;
     }
@@ -1022,10 +1180,11 @@ function getTargetPlayerId(target) {
     }
 
     return null;
-}
+};
 
 // Read and clamp a timed bomb countdown target.
-function getCountdown(target) {
+getCountdown = function(target) {
+    "use strict";
     if (target && Number.isInteger(target.countdown)) {
         return target.countdown;
     }
@@ -1035,10 +1194,11 @@ function getCountdown(target) {
     }
 
     return null;
-}
+};
 
 // Read a two-tile target for tile-swap items.
-function getTilePair(target) {
+getTilePair = function(target) {
+    "use strict";
     if (Array.isArray(target) && target.length >= 2) {
         return {
             firstIndex: target[0],
@@ -1054,10 +1214,11 @@ function getTilePair(target) {
     }
 
     return null;
-}
+};
 
 // Read a single tile target for remote trigger.
-function getTileIndexTarget(target) {
+getTileIndexTarget = function(target) {
+    "use strict";
     if (typeof target === "number") {
         return target;
     }
@@ -1068,10 +1229,11 @@ function getTileIndexTarget(target) {
         return target.index;
     }
     return null;
-}
+};
 
 // Read the item or key selected for thief hand.
-function getTargetItemType(target) {
+getTargetItemType = function(target) {
+    "use strict";
     if (target && typeof target.itemType === "string") {
         return target.itemType;
     }
@@ -1079,19 +1241,23 @@ function getTargetItemType(target) {
         return target.stolenItemType;
     }
     return "";
-}
+};
 
 // Validate that a tile can be used in a costly swap.
-function canSwapTile(game, index) {
-    const tile = Number.isInteger(index) && index >= 0 && index < BOARD_SIZE * BOARD_SIZE
-        ? getTile(game, index)
-        : undefined;
+canSwapTile = function(game, index) {
+    "use strict";
+    let tile;
+
+    if (Number.isInteger(index) && index >= 0 && index < BOARD_SIZE * BOARD_SIZE) {
+        tile = getTile(game, index);
+    }
 
     return tile !== undefined && tile.revealed && !isSpawnIndex(index);
-}
+};
 
 // Validate a tile target for remote trigger.
-function canRemoteTriggerTile(game, tileIndex, playerPosition) {
+canRemoteTriggerTile = function(game, tileIndex, playerPosition) {
+    "use strict";
     let tile;
 
     if (!Number.isInteger(tileIndex) || tileIndex < 0 || tileIndex >= BOARD_SIZE * BOARD_SIZE) {
@@ -1109,18 +1275,20 @@ function canRemoteTriggerTile(game, tileIndex, playerPosition) {
         tile.type !== TILE_TYPES.EMPTY &&
         tile.type !== TILE_TYPES.WALL &&
         tile.type !== TILE_TYPES.EXIT;
-}
+};
 
 // Return whether any player currently occupies a tile.
-function tileHasPlayer(game, tileIndex) {
+tileHasPlayer = function(game, tileIndex) {
+    "use strict";
     return game.players.some(function (player) {
         return player.position === tileIndex;
     });
-}
+};
 
 // Swapping tile contents also moves a dropped key and can move the exit door.
 // Spawn tiles stay fixed so players always keep a safe home position.
-function swapTileContents(game, firstIndex, secondIndex) {
+swapTileContents = function(game, firstIndex, secondIndex) {
+    "use strict";
     const first = getTile(game, firstIndex);
     const second = getTile(game, secondIndex);
     const firstContent = {
@@ -1149,10 +1317,11 @@ function swapTileContents(game, firstIndex, secondIndex) {
     } else if (game.exitIndex === secondIndex) {
         game.exitIndex = firstIndex;
     }
-}
+};
 
 // Reveal one tile affected by a mine blast.
-function revealBlastTile(game, tileIndex, explodedMineIndexes) {
+revealBlastTile = function(game, tileIndex, explodedMineIndexes) {
+    "use strict";
     const tile = getTile(game, tileIndex);
 
     if (tile.revealed) {
@@ -1178,10 +1347,11 @@ function revealBlastTile(game, tileIndex, explodedMineIndexes) {
     } else {
         destroyWallTile(game, tileIndex);
     }
-}
+};
 
 // Reveal all neighbours affected by a mine blast.
-function revealBlastNeighbours(game, tileIndex, explodedMineIndexes) {
+revealBlastNeighbours = function(game, tileIndex, explodedMineIndexes) {
+    "use strict";
     let index = 0;
 
     while (index < game.tiles.length) {
@@ -1190,11 +1360,12 @@ function revealBlastNeighbours(game, tileIndex, explodedMineIndexes) {
         }
         index += 1;
     }
-}
+};
 
 // Mines kill every player within Manhattan distance 1, reveal nearby tiles,
 // and then become empty. Any mine uncovered by the blast also explodes.
-function revealMine(game, tileIndex, explodedMineIndexes) {
+revealMine = function(game, tileIndex, explodedMineIndexes) {
+    "use strict";
     const explodedIndexes = explodedMineIndexes || [];
 
     if (explodedIndexes.indexOf(tileIndex) !== -1) {
@@ -1210,7 +1381,7 @@ function revealMine(game, tileIndex, explodedMineIndexes) {
     consumeTile(game, tileIndex);
     destroyBlastWalls(game, tileIndex);
     revealBlastNeighbours(game, tileIndex, explodedIndexes);
-}
+};
 
 /**
  * Creates a new hidden-tile party board game for two to four local players.
@@ -1226,7 +1397,8 @@ function revealMine(game, tileIndex, explodedMineIndexes) {
  * @param {string[]} [options.tileContentSequence] - Queued contents for reveals.
  * @returns {object} A new game state ready for the first player turn.
  */
-export function createGame(playerCount, options) {
+createGame = function(playerCount, options) {
+    "use strict";
     const setup = normalizeOptions(options);
 
     if (!Number.isInteger(playerCount) || playerCount < 2 || playerCount > 4) {
@@ -1234,6 +1406,7 @@ export function createGame(playerCount, options) {
     }
 
     const keyChoice = chooseKeyPosition(playerCount, setup);
+    const queuedTileContents = setup.tileContentSequence || [];
     return {
         boardSize: BOARD_SIZE,
         exitIndex: EXIT_INDEX,
@@ -1255,10 +1428,10 @@ export function createGame(playerCount, options) {
         players: makePlayers(playerCount),
         revealedTypeCounts: {},
         plannedTileContents: copyPlannedContents(setup),
-        queuedTileContents: (setup.tileContentSequence || []).slice(),
+        queuedTileContents: queuedTileContents.slice(),
         lastMessage: "Player 1 begins round 1."
     };
-}
+};
 
 /**
  * Returns the player whose turn is currently active.
@@ -1266,9 +1439,10 @@ export function createGame(playerCount, options) {
  * @param {object} gameState - Current game state.
  * @returns {object} The active player state.
  */
-export function getCurrentPlayer(gameState) {
+getCurrentPlayer = function(gameState) {
+    "use strict";
     return clonePlayer(gameState.players[gameState.currentPlayerIndex]);
-}
+};
 
 /**
  * Converts a one-dimensional board index into row and column coordinates.
@@ -1277,12 +1451,16 @@ export function getCurrentPlayer(gameState) {
  * @param {number} [boardSize=BOARD_SIZE] - Width and height of the square board.
  * @returns {object} Row and column coordinates for the index.
  */
-export function getCoordinates(index, boardSize = BOARD_SIZE) {
+getCoordinates = function(index, boardSize) {
+    "use strict";
+    if (boardSize === undefined) {
+        boardSize = BOARD_SIZE;
+    }
     return {
         row: Math.floor(index / boardSize),
         col: index % boardSize
     };
-}
+};
 
 /**
  * Converts row and column coordinates into the board's one-dimensional index.
@@ -1292,12 +1470,16 @@ export function getCoordinates(index, boardSize = BOARD_SIZE) {
  * @param {number} [boardSize=BOARD_SIZE] - Width and height of the square board.
  * @returns {number} One-dimensional tile index, or -1 when outside the board.
  */
-export function getIndex(row, col, boardSize = BOARD_SIZE) {
+getIndex = function(row, col, boardSize) {
+    "use strict";
+    if (boardSize === undefined) {
+        boardSize = BOARD_SIZE;
+    }
     if (row < 0 || row >= boardSize || col < 0 || col >= boardSize) {
         return -1;
     }
     return row * boardSize + col;
-}
+};
 
 /**
  * Measures the Manhattan distance between two board tiles.
@@ -1307,11 +1489,15 @@ export function getIndex(row, col, boardSize = BOARD_SIZE) {
  * @param {number} [boardSize=BOARD_SIZE] - Width and height of the square board.
  * @returns {number} Orthogonal grid distance between the two tiles.
  */
-export function getManhattanDistance(indexA, indexB, boardSize = BOARD_SIZE) {
+getManhattanDistance = function(indexA, indexB, boardSize) {
+    "use strict";
+    if (boardSize === undefined) {
+        boardSize = BOARD_SIZE;
+    }
     const first = getCoordinates(indexA, boardSize);
     const second = getCoordinates(indexB, boardSize);
     return Math.abs(first.row - second.row) + Math.abs(first.col - second.col);
-}
+};
 
 /**
  * Finds the neighbouring tile reached by moving one step in a direction.
@@ -1321,7 +1507,11 @@ export function getManhattanDistance(indexA, indexB, boardSize = BOARD_SIZE) {
  * @param {number} [boardSize=BOARD_SIZE] - Width and height of the square board.
  * @returns {number} Next tile index, or -1 if the move leaves the board.
  */
-export function getNextPosition(position, direction, boardSize = BOARD_SIZE) {
+getNextPosition = function(position, direction, boardSize) {
+    "use strict";
+    if (boardSize === undefined) {
+        boardSize = BOARD_SIZE;
+    }
     const coordinates = getCoordinates(position, boardSize);
     let row = coordinates.row;
     let col = coordinates.col;
@@ -1339,7 +1529,7 @@ export function getNextPosition(position, direction, boardSize = BOARD_SIZE) {
     }
 
     return getIndex(row, col, boardSize);
-}
+};
 
 /**
  * Moves the current player one orthogonal revealed tile, resolving key pickup,
@@ -1349,7 +1539,8 @@ export function getNextPosition(position, direction, boardSize = BOARD_SIZE) {
  * @param {string} direction - Direction to move.
  * @returns {object} New game state after the move or a blocked-action state.
  */
-export function moveCurrentPlayer(gameState, direction) {
+moveCurrentPlayer = function(gameState, direction) {
+    "use strict";
     if (gameState.status === "won") {
         return failedAction(gameState, "The game has already been won.");
     }
@@ -1401,7 +1592,7 @@ export function moveCurrentPlayer(gameState, direction) {
     }
 
     return finishAction(game);
-}
+};
 
 /**
  * Reveals a hidden tile. Revealed mines explode immediately, while the unique
@@ -1411,7 +1602,8 @@ export function moveCurrentPlayer(gameState, direction) {
  * @param {number} tileIndex - Tile index to reveal.
  * @returns {object} New game state after revealing the tile.
  */
-export function revealTile(gameState, tileIndex) {
+revealTile = function(gameState, tileIndex) {
+    "use strict";
     if (gameState.players[gameState.currentPlayerIndex].restrictedNextTurn) {
         return skipRestrictedCurrentTurn(gameState);
     }
@@ -1455,7 +1647,7 @@ export function revealTile(gameState, tileIndex) {
     }
 
     return finishAction(game);
-}
+};
 
 /**
  * Uses one item held by the current player. Targets are supplied as small data
@@ -1466,7 +1658,8 @@ export function revealTile(gameState, tileIndex) {
  * @param {object|number|number[]} target - Target data for the chosen item.
  * @returns {object} New game state after using the item, or unchanged on failure.
  */
-export function useCurrentPlayerItem(gameState, itemType, target) {
+useCurrentPlayerItem = function(gameState, itemType, target) {
+    "use strict";
     if (gameState.status === "won") {
         return failedAction(gameState, "The game has already been won.");
     }
@@ -1506,25 +1699,25 @@ export function useCurrentPlayerItem(gameState, itemType, target) {
         actionMessage = "Timed bomb placed: Player " + targetPlayerId + " has a " + countdown + " turn countdown.";
         succeeded = true;
     } else if (itemType === ITEM_TYPES.RESTRICT_MOVE) {
-        const targetPlayer = getPlayer(game, getTargetPlayerId(target));
+        const restrictedPlayer = getPlayer(game, getTargetPlayerId(target));
 
-        if (targetPlayer === undefined) {
+        if (restrictedPlayer === undefined) {
             return failedAction(gameState, "Choose a player to restrict.");
         }
 
-        targetPlayer.restrictedNextTurn = true;
-        actionMessage = "Restrict move used: Player " + targetPlayer.id + " will skip their next turn.";
+        restrictedPlayer.restrictedNextTurn = true;
+        actionMessage = "Restrict move used: Player " + restrictedPlayer.id + " will skip their next turn.";
         succeeded = true;
     } else if (itemType === ITEM_TYPES.SWAP_PLAYER) {
-        const targetPlayer = getPlayer(game, getTargetPlayerId(target));
+        const swapTargetPlayer = getPlayer(game, getTargetPlayerId(target));
 
-        if (targetPlayer === undefined || targetPlayer.id === playerId) {
+        if (swapTargetPlayer === undefined || swapTargetPlayer.id === playerId) {
             return failedAction(gameState, "Choose another player to swap with.");
         }
 
         const oldPosition = player.position;
-        player.position = targetPlayer.position;
-        targetPlayer.position = oldPosition;
+        player.position = swapTargetPlayer.position;
+        swapTargetPlayer.position = oldPosition;
         // Swapping is movement-like for player contact, but deliberately does
         // not trigger tile contents because no one stepped onto a tile.
         pickUpVisibleKey(game, playerId);
@@ -1575,22 +1768,22 @@ export function useCurrentPlayerItem(gameState, itemType, target) {
             return failedAction(gameState, "No visible key is within magnet range.");
         }
     } else if (itemType === ITEM_TYPES.THIEF_HAND) {
-        const targetPlayerId = getTargetPlayerId(target);
+        const thiefTargetPlayerId = getTargetPlayerId(target);
         const stolenItemType = getTargetItemType(target);
-        const targetPlayer = getPlayer(game, targetPlayerId);
+        const thiefTargetPlayer = getPlayer(game, thiefTargetPlayerId);
 
-        if (targetPlayer === undefined || targetPlayer.id === playerId || stolenItemType === "") {
+        if (thiefTargetPlayer === undefined || thiefTargetPlayer.id === playerId || stolenItemType === "") {
             return failedAction(gameState, "Choose another player's item to steal.");
         }
         if (stolenItemType === KEY_STEAL_TARGET) {
             if (player.hasKey) {
                 return failedAction(gameState, "The key is already yours.");
             }
-            if (!targetPlayer.hasKey || game.key.holderPlayerId !== targetPlayer.id) {
+            if (!thiefTargetPlayer.hasKey || game.key.holderPlayerId !== thiefTargetPlayer.id) {
                 return failedAction(gameState, "That player does not have the key.");
             }
 
-            targetPlayer.hasKey = false;
+            thiefTargetPlayer.hasKey = false;
             player.hasKey = true;
             game.key.holderPlayerId = playerId;
             game.key.position = player.position;
@@ -1599,16 +1792,16 @@ export function useCurrentPlayerItem(gameState, itemType, target) {
             actionMessage = "Player " + playerId + " got the key.";
             succeeded = true;
         } else {
-            if (targetPlayer.items.indexOf(stolenItemType) === -1) {
+            if (thiefTargetPlayer.items.indexOf(stolenItemType) === -1) {
                 return failedAction(gameState, "That player does not have the chosen item.");
             }
             if (stolenItemType !== itemType && player.items.indexOf(stolenItemType) !== -1) {
                 return failedAction(gameState, "Duplicate item blocked: this player already has " + readableItemName(stolenItemType) + ".");
             }
 
-            removeOneItem(targetPlayer, stolenItemType);
+            removeOneItem(thiefTargetPlayer, stolenItemType);
             stolenItemTypeToAdd = stolenItemType;
-            actionMessage = "Thief hand used: stole " + readableItemName(stolenItemType) + " from Player " + targetPlayer.id + ".";
+            actionMessage = "Thief hand used: stole " + readableItemName(stolenItemType) + " from Player " + thiefTargetPlayer.id + ".";
             succeeded = true;
         }
     } else if (itemType === ITEM_TYPES.REMOTE_TRIGGER) {
@@ -1660,7 +1853,7 @@ export function useCurrentPlayerItem(gameState, itemType, target) {
     }
 
     return failedAction(gameState, "The item had no valid effect.");
-}
+};
 
 /**
  * Lets the current player spend one action to detonate a timed bomb they
@@ -1670,7 +1863,8 @@ export function useCurrentPlayerItem(gameState, itemType, target) {
  * @param {object|number} target - Bomb carrier player id or target object.
  * @returns {object} New game state after the early detonation, or unchanged on failure.
  */
-export function detonateCurrentPlayerBomb(gameState, target) {
+detonateCurrentPlayerBomb = function(gameState, target) {
+    "use strict";
     if (gameState.status === "won") {
         return failedAction(gameState, "The game has already been won.");
     }
@@ -1698,7 +1892,7 @@ export function detonateCurrentPlayerBomb(gameState, target) {
         position: bombCarrier.position
     }]);
     return finishAction(game);
-}
+};
 
 /**
  * Dismisses a temporary current-turn event without spending an action. Stored
@@ -1708,7 +1902,8 @@ export function detonateCurrentPlayerBomb(gameState, target) {
  * @param {string} itemType - Temporary event type to dismiss.
  * @returns {object} New game state with that temporary event removed.
  */
-export function discardCurrentPlayerItem(gameState, itemType) {
+discardCurrentPlayerItem = function(gameState, itemType) {
+    "use strict";
     const originalPlayer = gameState.players[gameState.currentPlayerIndex];
     const originalPendingEventMatches = gameState.pendingEvent !== null &&
         gameState.pendingEvent !== undefined &&
@@ -1736,7 +1931,7 @@ export function discardCurrentPlayerItem(gameState, itemType) {
     }
     setMessage(game, readableItemName(itemType) + " event dismissed.");
     return pendingEventMatches ? finishAction(game) : game;
-}
+};
 
 /**
  * Ends the active player's turn, skips any players restricted for their next
@@ -1745,7 +1940,8 @@ export function discardCurrentPlayerItem(gameState, itemType) {
  * @param {object} gameState - Current game state.
  * @returns {object} New game state at the start of the next turn.
  */
-export function endTurn(gameState) {
+endTurn = function(gameState) {
+    "use strict";
     if (gameState.status === "won") {
         return cloneGame(gameState);
     }
@@ -1767,7 +1963,7 @@ export function endTurn(gameState) {
     beginCurrentTurn(game);
     setMessage(game, turnStartMessage(game, skippedTurns, bombMessages));
     return game;
-}
+};
 
 /**
  * Reports whether any player has won the game.
@@ -1775,9 +1971,10 @@ export function endTurn(gameState) {
  * @param {object} gameState - Current game state.
  * @returns {boolean} True once a key holder reaches the centre exit.
  */
-export function isGameWon(gameState) {
+isGameWon = function(gameState) {
+    "use strict";
     return gameState.status === "won";
-}
+};
 
 /**
  * Builds a presentation-safe view of the board for the browser UI. Hidden tile
@@ -1786,7 +1983,8 @@ export function isGameWon(gameState) {
  * @param {object} gameState - Current game state.
  * @returns {object[]} Visible tile descriptions for rendering the board.
  */
-export function getVisibleBoard(gameState) {
+getVisibleBoard = function(gameState) {
+    "use strict";
     return gameState.tiles.map(function (tile) {
         const players = gameState.players.filter(function (player) {
             return player.position === tile.index;
@@ -1814,4 +2012,27 @@ export function getVisibleBoard(gameState) {
             players
         };
     });
-}
+};
+
+export default Object.freeze({
+    BOARD_SIZE,
+    EXIT_INDEX,
+    SPAWN_POSITIONS,
+    DIRECTIONS,
+    TILE_TYPES,
+    ITEM_TYPES,
+    createGame,
+    getCurrentPlayer,
+    getCoordinates,
+    getIndex,
+    getManhattanDistance,
+    getNextPosition,
+    moveCurrentPlayer,
+    revealTile,
+    useCurrentPlayerItem,
+    detonateCurrentPlayerBomb,
+    discardCurrentPlayerItem,
+    endTurn,
+    isGameWon,
+    getVisibleBoard
+});

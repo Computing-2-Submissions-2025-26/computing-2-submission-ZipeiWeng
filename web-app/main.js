@@ -2,7 +2,8 @@
 // Rule decisions stay in game.js; this file only renders state, gathers user
 // input, and calls exported game functions.
 
-import {
+import Game from "journey";
+const {
     DIRECTIONS,
     ITEM_TYPES,
     TILE_TYPES,
@@ -15,7 +16,123 @@ import {
     moveCurrentPlayer,
     revealTile,
     useCurrentPlayerItem
-} from "./game.js";
+} = Game;
+
+let tileName;
+let readableType;
+let escapeAttribute;
+let playerCount;
+let activeProfiles;
+let roleForId;
+let roleClass;
+let roleChoiceNumber;
+let profileForPlayer;
+let defaultPlayerName;
+let playerName;
+let formatMessageForUi;
+let isSetupReady;
+let firstUnreadyPlayerIndex;
+let clampSetupActivePlayer;
+let setupActiveProfile;
+let roleOwner;
+let resetSetupRoles;
+let showScreen;
+let setPaused;
+let updateSetupStatus;
+let renderRolePicker;
+let renderPlayerSetup;
+let selectSetupRole;
+let confirmSetupRole;
+let currentSelectedItem;
+let requiredTileTargetCount;
+let isPlayerTargetItem;
+let isTemporaryEventItem;
+let canNoUseItem;
+let discardTemporaryEvent;
+let requestNoUse;
+let closeNoUseModal;
+let confirmNoUseCancel;
+let pendingEventItem;
+let openPendingEventControls;
+let selectPendingEventItem;
+let itemModeText;
+let heartElements;
+let renderHearts;
+let flashCurrentHearts;
+let isWeakenedPlayer;
+let flashDamagedPlayers;
+let tileText;
+let appendTileImage;
+let tileEffectText;
+let describePlayers;
+let effectTextFromMessage;
+let tileClass;
+let setUiMessage;
+let playerById;
+let isMovementAnimating;
+let tileCenterPercent;
+let walkingDirectionClass;
+let movementDetails;
+let clearMovementAnimation;
+let queueTurnHandoff;
+let maybeShowTurnHandoff;
+let closeTurnHandoff;
+let closeCenterPrompt;
+let uiMessageText;
+let isNoMoveRewardMessage;
+let addedItemType;
+let noMoveRewardDetails;
+let noMoveRewardPrompt;
+let promptTitleText;
+let sidebarGameState;
+let visualCard;
+let visualImageCard;
+let isDoorWarningMessage;
+let promptVisualHtml;
+let showCenterPrompt;
+let finishMovementAnimation;
+let renderMovementLayer;
+let closeBombModal;
+let renderStealTargets;
+let renderBombTargets;
+let openBombModal;
+let playExplosion;
+let playMonsterBite;
+let makeBombMarker;
+let makeHpMarker;
+let renderBoard;
+let renderTurn;
+let renderInventory;
+let installedBombTargets;
+let renderDetonateControls;
+let fillSelect;
+let renderItemControls;
+let renderVictoryScreen;
+let render;
+let hpLossPlayerIds;
+let timedBombExplosionTiles;
+let monsterAttackTileIndex;
+let sidebarStateAfterDamage;
+let resetPlayerIds;
+let resetFeedbackMessage;
+let didSpendAction;
+let updateGame;
+let visibleTileAt;
+let canChooseItemTargetTile;
+let directionToAdjacentTile;
+let boardButton;
+let focusTile;
+let selectTile;
+let useSelectedItem;
+let confirmItemTargetTile;
+let confirmSelectedTile;
+let handleTileClick;
+let itemTarget;
+let isBoardTileElement;
+let isFormControlElement;
+let selectedTileAfterArrow;
+let startPreparedGame;
+let enterPreparedGame;
 
 const menuScreen = document.querySelector("#menu-screen");
 const setupScreen = document.querySelector("#setup-screen");
@@ -109,14 +226,12 @@ const ROLE_OPTIONS = Object.freeze([
     {id: "emberTrickster", name: "Ember Trickster"}
 ]);
 
-let playerProfiles = ROLE_OPTIONS.map(function (role, index) {
-    return {
-        id: index + 1,
-        name: "",
-        roleId: "",
-        ready: false
-    };
-});
+let playerProfiles = [
+    {id: 1, name: "", roleId: "", ready: false},
+    {id: 2, name: "", roleId: "", ready: false},
+    {id: 3, name: "", roleId: "", ready: false},
+    {id: 4, name: "", roleId: "", ready: false}
+];
 
 const TILE_ICONS = Object.freeze({
     hidden: "?",
@@ -167,7 +282,8 @@ const ITEM_ICONS = Object.freeze({
 });
 
 // Convert internal tile data into short text for buttons and screen readers.
-function tileName(tile) {
+tileName = function(tile) {
+    "use strict";
     if (tile.isExit) {
         return "Exit";
     }
@@ -178,75 +294,86 @@ function tileName(tile) {
         return "Empty";
     }
     return tile.type;
-}
+};
 
 // Convert internal camelCase ids into readable UI text.
-function readableType(type) {
+readableType = function(type) {
+    "use strict";
     if (type === "") {
         return "No item";
     }
     return type.replace(/([A-Z])/g, " $1");
-}
+};
 
 // Escape text before inserting it into HTML attributes.
-function escapeAttribute(value) {
+escapeAttribute = function(value) {
+    "use strict";
     return String(value).replace(/&/g, "&amp;")
         .replace(/"/g, "&quot;")
         .replace(/</g, "&lt;")
         .replace(/>/g, "&gt;");
-}
+};
 
 // Read the selected number of players from setup.
-function playerCount() {
+playerCount = function() {
+    "use strict";
     return Number(setupPlayerCountElement.value);
-}
+};
 
 // Return only the player profiles currently in use.
-function activeProfiles() {
+activeProfiles = function() {
+    "use strict";
     return playerProfiles.slice(0, playerCount());
-}
+};
 
 // Find the role metadata for a role id.
-function roleForId(roleId) {
+roleForId = function(roleId) {
+    "use strict";
     return ROLE_OPTIONS.find(function (role) {
         return role.id === roleId;
     }) || null;
-}
+};
 
 // Return the CSS class that colours a character role.
-function roleClass(roleId) {
+roleClass = function(roleId) {
+    "use strict";
     return roleForId(roleId) === null ? "role-unselected" : "role-" + roleId;
-}
+};
 
 // Return the one-based display number for a role option.
-function roleChoiceNumber(roleId) {
+roleChoiceNumber = function(roleId) {
+    "use strict";
     return ROLE_OPTIONS.findIndex(function (role) {
         return role.id === roleId;
     }) + 1;
-}
+};
 
 // Return custom name and role data for a player.
-function profileForPlayer(playerId) {
+profileForPlayer = function(playerId) {
+    "use strict";
     return playerProfiles[playerId - 1] || {
         id: playerId,
         name: defaultPlayerName(playerId),
         roleId: ROLE_OPTIONS[0].id,
         ready: true
     };
-}
+};
 
 // Build the fallback name for a player.
-function defaultPlayerName(playerId) {
+defaultPlayerName = function(playerId) {
+    "use strict";
     return "Player " + playerId;
-}
+};
 
 // Return the custom name or fallback name for a player.
-function playerName(playerId) {
+playerName = function(playerId) {
+    "use strict";
     return profileForPlayer(playerId).name.trim() || defaultPlayerName(playerId);
-}
+};
 
 // Clean rule messages before displaying them in the UI.
-function formatMessageForUi(message) {
+formatMessageForUi = function(message) {
+    "use strict";
     let formatted = message || "";
     let keyHolderMatch;
 
@@ -261,48 +388,51 @@ function formatMessageForUi(message) {
     if (formatted.indexOf("Key is Found!") !== -1) {
         return "Key is Found!";
     }
-    keyHolderMatch = formatted.match(/([^.]*) got the key\./);
+    keyHolderMatch = formatted.match(/([^.]*)\sgot\sthe\skey\./);
     if (keyHolderMatch !== null) {
         return keyHolderMatch[1] + " got the key.";
     }
     if (isNoMoveRewardMessage(formatted)) {
         if (formatted.indexOf("after 5 turns without moving") !== -1) {
             formatted = formatted.replace(
-                /([^.]*) received ([^.]*?) after 5 turns without moving\./,
+            /([^.]*)\sreceived\s([^.]*?)\safter\s5\sturns\swithout\smoving\./,
                 "$1 received a random item because they did not move for 5 turns: $2."
             );
         }
-        formatted = formatted.replace(/(?:^|\s)[^.]* begins round \d+\./g, "");
+        formatted = formatted.replace(/(?:^|\s)[^.]*\sbegins\sround\s\d+\./g, "");
         return formatted.trim();
     }
 
-    formatted = formatted.replace(/(?:^|\s)[^.]* begins round \d+\./g, "");
-    formatted = formatted.replace(/ next turn/g, " soon");
-    formatted = formatted.replace(/ this turn/g, "");
-    formatted = formatted.replace(/ turn countdown/g, " countdown");
-    formatted = formatted.replace(/ round countdown/g, " countdown");
-    formatted = formatted.replace(/ rounds/g, "");
-    formatted = formatted.replace(/ turns/g, "");
-    formatted = formatted.replace(/ round/g, "");
+    formatted = formatted.replace(/(?:^|\s)[^.]*\sbegins\sround\s\d+\./g, "");
+    formatted = formatted.replace(/\snext\sturn/g, " soon");
+    formatted = formatted.replace(/\sthis\sturn/g, "");
+    formatted = formatted.replace(/\sturn\scountdown/g, " countdown");
+    formatted = formatted.replace(/\sround\scountdown/g, " countdown");
+    formatted = formatted.replace(/\srounds/g, "");
+    formatted = formatted.replace(/\sturns/g, "");
+    formatted = formatted.replace(/\sround/g, "");
     return formatted.trim();
-}
+};
 
 // Return whether all selected players have confirmed characters.
-function isSetupReady() {
+isSetupReady = function() {
+    "use strict";
     return activeProfiles().every(function (profile) {
         return profile.roleId !== "" && profile.ready;
     });
-}
+};
 
 // Find the first setup profile still needing confirmation.
-function firstUnreadyPlayerIndex() {
+firstUnreadyPlayerIndex = function() {
+    "use strict";
     return activeProfiles().findIndex(function (profile) {
         return profile.roleId === "" || !profile.ready;
     });
-}
+};
 
 // Keep the setup cursor inside the active player range.
-function clampSetupActivePlayer() {
+clampSetupActivePlayer = function() {
+    "use strict";
     const count = playerCount();
 
     if (setupActivePlayerIndex >= count) {
@@ -311,33 +441,37 @@ function clampSetupActivePlayer() {
     if (setupActivePlayerIndex < 0) {
         setupActivePlayerIndex = 0;
     }
-}
+};
 
 // Return the profile currently choosing a character.
-function setupActiveProfile() {
+setupActiveProfile = function() {
+    "use strict";
     clampSetupActivePlayer();
     return activeProfiles()[setupActivePlayerIndex] || activeProfiles()[0];
-}
+};
 
 // Find which active player has already taken a role.
-function roleOwner(roleId) {
+roleOwner = function(roleId) {
+    "use strict";
     return activeProfiles().find(function (profile) {
         return profile.roleId === roleId;
     }) || null;
-}
+};
 
 // Clear setup character choices when returning to the menu.
-function resetSetupRoles() {
+resetSetupRoles = function() {
+    "use strict";
     playerProfiles.forEach(function (profile) {
         profile.roleId = "";
         profile.ready = false;
     });
     setupActivePlayerIndex = 0;
     setupPendingRoleId = "";
-}
+};
 
 // Switch between menu, setup, intro, and game screens.
-function showScreen(screenName) {
+showScreen = function(screenName) {
+    "use strict";
     menuScreen.hidden = screenName !== "menu";
     setupScreen.hidden = screenName !== "setup";
     introScreen.hidden = screenName !== "intro";
@@ -366,10 +500,11 @@ function showScreen(screenName) {
         victoryScreenElement.hidden = true;
         clearMovementAnimation();
     }
-}
+};
 
 // Open or close the pause menu and manage focus.
-function setPaused(paused) {
+setPaused = function(paused) {
+    "use strict";
     if (gameScreen.hidden) {
         return;
     }
@@ -386,20 +521,22 @@ function setPaused(paused) {
     } else {
         boardElement.focus();
     }
-}
+};
 
 // Refresh setup status text and start button availability.
-function updateSetupStatus() {
+updateSetupStatus = function() {
+    "use strict";
     setupStartGameButton.disabled = !isSetupReady();
     setupStatusElement.textContent = isSetupReady()
         ? "All ready."
         : (setupPendingRoleId === ""
             ? "Choose a colour."
             : "Confirm this colour.");
-}
+};
 
 // Render the current player's character colour choices.
-function renderRolePicker() {
+renderRolePicker = function() {
+    "use strict";
     const activeProfile = setupActiveProfile();
     const previewRoleId = setupPendingRoleId === "" ? activeProfile.roleId : setupPendingRoleId;
     const canConfirm = setupPendingRoleId !== "";
@@ -429,10 +566,11 @@ function renderRolePicker() {
         "</div>" +
         "<button type=\"button\" id=\"setup-confirm-role\" class=\"setup-confirm-role\"" +
         (canConfirm ? "" : " disabled") + ">Confirm</button>";
-}
+};
 
 // Render name inputs and selected character previews.
-function renderPlayerSetup() {
+renderPlayerSetup = function() {
+    "use strict";
     playerSetupListElement.innerHTML = "";
 
     activeProfiles().forEach(function (profile) {
@@ -454,10 +592,11 @@ function renderPlayerSetup() {
 
     renderRolePicker();
     updateSetupStatus();
-}
+};
 
 // Select a pending character role during setup.
-function selectSetupRole(roleId) {
+selectSetupRole = function(roleId) {
+    "use strict";
     const profile = setupActiveProfile();
     const owner = roleOwner(roleId);
 
@@ -469,10 +608,11 @@ function selectSetupRole(roleId) {
     profile.ready = false;
     profile.roleId = "";
     renderPlayerSetup();
-}
+};
 
 // Confirm the current player's role and advance setup.
-function confirmSetupRole() {
+confirmSetupRole = function() {
+    "use strict";
     const profile = setupActiveProfile();
     const owner = roleOwner(setupPendingRoleId);
     let nextUnreadyIndex;
@@ -488,20 +628,22 @@ function confirmSetupRole() {
     setupActivePlayerIndex = nextUnreadyIndex === -1 ? profile.id - 1 : nextUnreadyIndex;
     clampSetupActivePlayer();
     renderPlayerSetup();
-}
+};
 
 // Return the selected inventory item, clearing invalid selection.
-function currentSelectedItem(player) {
+currentSelectedItem = function(player) {
+    "use strict";
     if (selectedItemIndex === null || selectedItemIndex < 0 || selectedItemIndex >= player.items.length) {
         selectedItemIndex = null;
         itemTargetTiles = [];
         return "";
     }
     return player.items[selectedItemIndex];
-}
+};
 
 // Return how many board tiles an item needs as targets.
-function requiredTileTargetCount(itemType) {
+requiredTileTargetCount = function(itemType) {
+    "use strict";
     if (itemType === ITEM_TYPES.SWAP_ANY_TILES_WITH_HP_COST) {
         return 2;
     }
@@ -509,30 +651,34 @@ function requiredTileTargetCount(itemType) {
         return 1;
     }
     return 0;
-}
+};
 
 // Return whether an item opens the player target modal.
-function isPlayerTargetItem(itemType) {
+isPlayerTargetItem = function(itemType) {
+    "use strict";
     return itemType === ITEM_TYPES.TIMED_BOMB_PACK ||
         itemType === ITEM_TYPES.RESTRICT_MOVE ||
         itemType === ITEM_TYPES.SWAP_PLAYER ||
         itemType === ITEM_TYPES.THIEF_HAND;
-}
+};
 
 // Return whether an item can be dismissed as a temporary event.
-function isTemporaryEventItem(itemType) {
+isTemporaryEventItem = function(itemType) {
+    "use strict";
     return itemType === ITEM_TYPES.TIMED_BOMB_PACK ||
         itemType === ITEM_TYPES.RESTRICT_MOVE ||
         itemType === ITEM_TYPES.SWAP_PLAYER;
-}
+};
 
 // Return whether the selected temporary event can be dismissed.
-function canNoUseItem(itemType) {
+canNoUseItem = function(itemType) {
+    "use strict";
     return itemType !== "" && pendingEventItem() === itemType && isTemporaryEventItem(itemType);
-}
+};
 
 // Dismiss a temporary event and update the game state.
-function discardTemporaryEvent(itemType) {
+discardTemporaryEvent = function(itemType) {
+    "use strict";
     if (!isTemporaryEventItem(itemType)) {
         return false;
     }
@@ -544,10 +690,11 @@ function discardTemporaryEvent(itemType) {
     noUseModalElement.hidden = true;
     updateGame(discardCurrentPlayerItem(gameState, itemType));
     return true;
-}
+};
 
 // Open the confirmation modal for dismissing a temporary event.
-function requestNoUse(itemType) {
+requestNoUse = function(itemType) {
+    "use strict";
     if (!canNoUseItem(itemType)) {
         return false;
     }
@@ -558,10 +705,11 @@ function requestNoUse(itemType) {
     noUseModalElement.hidden = false;
     noUseConfirmButton.focus();
     return true;
-}
+};
 
 // Close the no-use confirmation modal.
-function closeNoUseModal() {
+closeNoUseModal = function() {
+    "use strict";
     if (!isNoUseModalOpen) {
         return;
     }
@@ -570,10 +718,11 @@ function closeNoUseModal() {
     pendingNoUseItemType = "";
     noUseModalElement.hidden = true;
     render();
-}
+};
 
 // Confirm dismissing the currently pending temporary event.
-function confirmNoUseCancel() {
+confirmNoUseCancel = function() {
+    "use strict";
     const itemType = pendingNoUseItemType;
 
     if (itemType === "") {
@@ -586,10 +735,11 @@ function confirmNoUseCancel() {
     noUseModalElement.hidden = true;
     closeBombModal(false);
     return discardTemporaryEvent(itemType);
-}
+};
 
 // Return the pending event item for the current player.
-function pendingEventItem() {
+pendingEventItem = function() {
+    "use strict";
     const player = getCurrentPlayer(gameState);
 
     if (gameState.pendingEvent === null || gameState.pendingEvent === undefined) {
@@ -599,10 +749,11 @@ function pendingEventItem() {
         return "";
     }
     return gameState.pendingEvent.itemType;
-}
+};
 
 // Open item controls for a pending current-turn event.
-function openPendingEventControls() {
+openPendingEventControls = function() {
+    "use strict";
     const itemType = pendingEventItem();
 
     if (itemType === "") {
@@ -620,10 +771,11 @@ function openPendingEventControls() {
         return true;
     }
     return false;
-}
+};
 
 // Select the inventory entry that matches the pending event.
-function selectPendingEventItem() {
+selectPendingEventItem = function() {
+    "use strict";
     const player = getCurrentPlayer(gameState);
     const itemType = pendingEventItem();
 
@@ -633,10 +785,11 @@ function selectPendingEventItem() {
 
     selectedItemIndex = player.items.indexOf(itemType);
     itemTargetTiles = [];
-}
+};
 
 // Build short instructions for the selected item mode.
-function itemModeText(itemType) {
+itemModeText = function(itemType) {
+    "use strict";
     const requiredTargets = requiredTileTargetCount(itemType);
 
     if (itemType === "") {
@@ -646,18 +799,11 @@ function itemModeText(itemType) {
         return readableType(itemType) + ": choose " + requiredTargets + " tiles";
     }
     return readableType(itemType) + ": choose target";
-}
-
-// Summarise selected board targets for item use.
-function itemTargetText() {
-    if (itemTargetTiles.length === 0) {
-        return "Tiles: -";
-    }
-    return "Tiles: " + itemTargetTiles.join(", ");
-}
+};
 
 // Create the heart icons for one player's HP.
-function heartElements(player) {
+heartElements = function(player) {
+    "use strict";
     return Array.from({length: player.maxHp}, function (ignore, index) {
         const heart = document.createElement("span");
 
@@ -666,35 +812,39 @@ function heartElements(player) {
         heart.setAttribute("aria-hidden", "true");
         return heart;
     });
-}
+};
 
 // Render the current player's sidebar HP.
-function renderHearts(player) {
+renderHearts = function(player) {
+    "use strict";
     currentHpElement.innerHTML = "";
     currentHpElement.setAttribute("aria-label", playerName(player.id) + " HP " + player.hp + " of " + player.maxHp);
     heartElements(player).forEach(function (heart) {
         currentHpElement.append(heart);
     });
-}
+};
 
 // Animate sidebar hearts after HP loss.
-function flashCurrentHearts() {
+flashCurrentHearts = function() {
+    "use strict";
     currentHpElement.classList.remove("hp-flash");
-    window.setTimeout(function () {
+    setTimeout(function () {
         currentHpElement.classList.add("hp-flash");
     }, 0);
-    window.setTimeout(function () {
+    setTimeout(function () {
         currentHpElement.classList.remove("hp-flash");
     }, 1500);
-}
+};
 
 // Return whether a player should show damage feedback.
-function isWeakenedPlayer(playerId) {
+isWeakenedPlayer = function(playerId) {
+    "use strict";
     return weakenedPlayerIds.indexOf(playerId) !== -1;
-}
+};
 
 // Mark damaged players for a short on-map flash.
-function flashDamagedPlayers(playerIds) {
+flashDamagedPlayers = function(playerIds) {
+    "use strict";
     const uniqueIds = playerIds.filter(function (playerId, index) {
         return playerIds.indexOf(playerId) === index;
     });
@@ -705,14 +855,15 @@ function flashDamagedPlayers(playerIds) {
 
     weakenedPlayerIds = uniqueIds;
     render();
-    window.setTimeout(function () {
+    setTimeout(function () {
         weakenedPlayerIds = [];
         render();
     }, 1450);
-}
+};
 
 // Return the visible icon text for a tile.
-function tileText(tile) {
+tileText = function(tile) {
+    "use strict";
     if (tile.hasVisibleKey) {
         return TILE_ICONS.key;
     }
@@ -726,10 +877,11 @@ function tileText(tile) {
         return "";
     }
     return TILE_ICONS[tile.type] || "";
-}
+};
 
 // Append a tile image asset when a tile uses artwork.
-function appendTileImage(content, tile) {
+appendTileImage = function(content, tile) {
+    "use strict";
     if (tile.hasVisibleKey || !tile.revealed || tile.type !== TILE_TYPES.MONSTER_CAMP) {
         return;
     }
@@ -741,10 +893,11 @@ function appendTileImage(content, tile) {
     image.alt = "";
     image.setAttribute("aria-hidden", "true");
     content.append(image);
-}
+};
 
 // Return screen-reader and tooltip text for a tile.
-function tileEffectText(tile) {
+tileEffectText = function(tile) {
+    "use strict";
     if (tile.hasVisibleKey) {
         return "Key: step onto this revealed tile to pick it up, then reach the centre exit.";
     }
@@ -755,28 +908,31 @@ function tileEffectText(tile) {
         return "Hidden tile: confirm this tile to reveal it before players can enter.";
     }
     return TILE_EFFECTS[tile.type] || "Revealed tile.";
-}
+};
 
 // Append occupant names to a tile accessibility label.
-function describePlayers(tile) {
+describePlayers = function(tile) {
+    "use strict";
     if (tile.players.length === 0) {
         return "";
     }
     return " " + tile.players.map(function (player) {
         return playerName(player.id);
     }).join(", ");
-}
+};
 
 // Return effect detail text for the hidden status region.
-function effectTextFromMessage(message) {
+effectTextFromMessage = function(message) {
+    "use strict";
     if (message === undefined || message === "") {
         return "Reveal a tile or step onto a revealed event to see its effect.";
     }
     return message;
-}
+};
 
 // Build the CSS class list for one board tile.
-function tileClass(tile) {
+tileClass = function(tile) {
+    "use strict";
     const classes = ["tile"];
 
     if (tile.index === selectedTile) {
@@ -802,28 +958,32 @@ function tileClass(tile) {
     }
 
     return classes.join(" ");
-}
+};
 
 // Set temporary UI-only status text.
-function setUiMessage(message) {
+setUiMessage = function(message) {
+    "use strict";
     uiMessage = message;
     renderTurn();
-}
+};
 
 // Find a player in a game state by id.
-function playerById(game, playerId) {
+playerById = function(game, playerId) {
+    "use strict";
     return game.players.find(function (player) {
         return player.id === playerId;
     });
-}
+};
 
 // Return whether a walking animation is in progress.
-function isMovementAnimating() {
+isMovementAnimating = function() {
+    "use strict";
     return movementAnimation !== null;
-}
+};
 
 // Convert a tile index to board-centred percentage coordinates.
-function tileCenterPercent(tileIndex) {
+tileCenterPercent = function(tileIndex) {
+    "use strict";
     const boardSize = gameState.boardSize;
     const row = Math.floor(tileIndex / boardSize);
     const col = tileIndex % boardSize;
@@ -832,10 +992,11 @@ function tileCenterPercent(tileIndex) {
         left: ((col + 0.5) / boardSize) * 100,
         top: ((row + 0.5) / boardSize) * 100
     };
-}
+};
 
 // Return sprite classes for the walking direction.
-function walkingDirectionClass(direction) {
+walkingDirectionClass = function(direction) {
+    "use strict";
     if (direction === DIRECTIONS.LEFT) {
         return "character-sprite sprite-side walk-side walk-left";
     }
@@ -843,10 +1004,11 @@ function walkingDirectionClass(direction) {
         return "character-sprite sprite-side walk-side walk-right";
     }
     return "character-sprite sprite-front walk-front";
-}
+};
 
 // Build animation metadata for a successful move.
-function movementDetails(previousGame, nextGame, playerId, direction) {
+movementDetails = function(previousGame, nextGame, playerId, direction) {
+    "use strict";
     const previousPlayer = playerById(previousGame, playerId);
     const nextPlayer = playerById(nextGame, playerId);
 
@@ -863,24 +1025,27 @@ function movementDetails(previousGame, nextGame, playerId, direction) {
         message: nextGame.lastMessage,
         rendered: false
     };
-}
+};
 
 // Stop and remove any active movement animation.
-function clearMovementAnimation() {
-    window.clearTimeout(movementTimer);
+clearMovementAnimation = function() {
+    "use strict";
+    clearTimeout(movementTimer);
     movementAnimation = null;
     movementLayerElement.innerHTML = "";
     gameScreen.classList.remove("movement-locked");
-}
+};
 
 // Queue the next player handoff screen.
-function queueTurnHandoff(playerId, lockedState) {
+queueTurnHandoff = function(playerId, lockedState) {
+    "use strict";
     pendingTurnHandoffPlayerId = playerId;
     pendingTurnHandoffLockedState = lockedState || null;
-}
+};
 
 // Show the handoff prompt when no other modal blocks it.
-function maybeShowTurnHandoff() {
+maybeShowTurnHandoff = function() {
+    "use strict";
     if (pendingTurnHandoffPlayerId === null || gameScreen.hidden || gameState.status === "won" ||
             isFeedbackOpen || isBombModalOpen || isNoUseModalOpen || isMovementAnimating() || isTurnHandoffOpen) {
         return;
@@ -891,10 +1056,11 @@ function maybeShowTurnHandoff() {
     turnHandoffElement.hidden = false;
     isTurnHandoffOpen = true;
     turnHandoffCard.focus();
-}
+};
 
 // Close the handoff prompt and return focus to the board.
-function closeTurnHandoff() {
+closeTurnHandoff = function() {
+    "use strict";
     if (!isTurnHandoffOpen) {
         return;
     }
@@ -906,47 +1072,53 @@ function closeTurnHandoff() {
     lockedSidebarGameState = null;
     render();
     boardElement.focus();
-}
+};
 
 // Close the event explanation prompt and continue flow.
-function closeCenterPrompt() {
+closeCenterPrompt = function() {
+    "use strict";
     centerPromptElement.hidden = true;
     isFeedbackOpen = false;
     if (pendingTurnHandoffPlayerId === null) {
         lockedSidebarGameState = null;
     }
-    window.clearTimeout(centerPromptTimer);
+    clearTimeout(centerPromptTimer);
     render();
     if (openPendingEventControls()) {
         return;
     }
     maybeShowTurnHandoff();
-}
+};
 
 // Apply display formatting to a UI message.
-function uiMessageText(message) {
+uiMessageText = function(message) {
+    "use strict";
     return formatMessageForUi(message);
-}
+};
 
 // Detect messages about the no-move reward.
-function isNoMoveRewardMessage(message) {
+isNoMoveRewardMessage = function(message) {
+    "use strict";
     return typeof message === "string" &&
         (message.indexOf("after 5 turns without moving") !== -1 ||
         message.indexOf("did not move for 5 turns") !== -1);
-}
+};
 
 // Find which item was newly added to a player.
-function addedItemType(previousPlayer, nextPlayer) {
+addedItemType = function(previousPlayer, nextPlayer) {
+    "use strict";
     const previousItems = previousPlayer.items || [];
+    const nextItems = nextPlayer.items || [];
 
-    return (nextPlayer.items || []).find(function (itemType) {
+    return nextItems.find(function (itemType) {
         return previousItems.indexOf(itemType) === -1;
     }) || "";
-}
+};
 
 // Extract no-move reward details from state or message changes.
-function noMoveRewardDetails(previousGame, nextGame) {
-    const messageMatch = nextGame.lastMessage.match(/Player (\d+) received ([^.]*?) after 5 turns without moving\./);
+noMoveRewardDetails = function(previousGame, nextGame) {
+    "use strict";
+    const messageMatch = nextGame.lastMessage.match(/Player\s(\d+)\sreceived\s([^.]*?)\safter\s5\sturns\swithout\smoving\./);
     let rewardPlayer;
 
     if (messageMatch !== null) {
@@ -975,10 +1147,11 @@ function noMoveRewardDetails(previousGame, nextGame) {
         playerId: rewardPlayer.id,
         itemName: readableType(addedItemType(playerById(previousGame, rewardPlayer.id), rewardPlayer))
     };
-}
+};
 
 // Build the modal text for a no-move reward.
-function noMoveRewardPrompt(details) {
+noMoveRewardPrompt = function(details) {
+    "use strict";
     if (details === null) {
         return "";
     }
@@ -986,10 +1159,11 @@ function noMoveRewardPrompt(details) {
     return playerName(details.playerId) +
         " received a random item because they did not move for 5 turns: " +
         details.itemName + ".";
-}
+};
 
 // Choose the title for an event explanation prompt.
-function promptTitleText(message) {
+promptTitleText = function(message) {
+    "use strict";
     if (isNoMoveRewardMessage(message)) {
         return "No Move Reward";
     }
@@ -1043,31 +1217,36 @@ function promptTitleText(message) {
         return "Item";
     }
     return "Event";
-}
+};
 
 // Return the state snapshot currently shown in the sidebar.
-function sidebarGameState() {
+sidebarGameState = function() {
+    "use strict";
     return lockedSidebarGameState || gameState;
-}
+};
 
 // Build one simple visual explanation card.
-function visualCard(icon, label) {
+visualCard = function(icon, label) {
+    "use strict";
     return "<span class=\"visual-card\"><span class=\"visual-icon\">" + icon + "</span><span>" + label + "</span></span>";
-}
+};
 
 // Build one visual card that uses an image asset.
-function visualImageCard(source, label) {
+visualImageCard = function(source, label) {
+    "use strict";
     return "<span class=\"visual-card\"><img class=\"visual-image-icon\" src=\"" + source +
         "\" alt=\"\" aria-hidden=\"true\"><span>" + label + "</span></span>";
-}
+};
 
 // Return whether a prompt should use the locked-door style.
-function isDoorWarningMessage(message) {
+isDoorWarningMessage = function(message) {
+    "use strict";
     return message.indexOf("Need the key to open the door") !== -1;
-}
+};
 
 // Build the diagram shown in an event explanation prompt.
-function promptVisualHtml(message) {
+promptVisualHtml = function(message) {
+    "use strict";
     if (isNoMoveRewardMessage(message)) {
         return "<div class=\"visual-diagram\">" +
             visualCard("5", "No Move") +
@@ -1213,10 +1392,11 @@ function promptVisualHtml(message) {
         "<span class=\"visual-arrow\">&rarr;</span>" +
         visualCard("!", "Event") +
         "</div>";
-}
+};
 
 // Show a central explanation prompt for an event or warning.
-function showCenterPrompt(message, shouldStayOpen) {
+showCenterPrompt = function(message, shouldStayOpen) {
+    "use strict";
     const persistent = shouldStayOpen !== false;
     const visibleMessage = uiMessageText(message);
 
@@ -1226,17 +1406,18 @@ function showCenterPrompt(message, shouldStayOpen) {
     centerPromptElement.classList.toggle("door-warning", isDoorWarningMessage(visibleMessage));
     centerPromptElement.hidden = false;
     isFeedbackOpen = persistent;
-    window.clearTimeout(centerPromptTimer);
+    clearTimeout(centerPromptTimer);
     if (persistent) {
         centerPromptCloseButton.focus();
         return;
     }
 
-    centerPromptTimer = window.setTimeout(closeCenterPrompt, 1800);
-}
+    centerPromptTimer = setTimeout(closeCenterPrompt, 1800);
+};
 
 // Complete a walking animation and show any feedback.
-function finishMovementAnimation() {
+finishMovementAnimation = function() {
+    "use strict";
     const feedbackMessage = movementAnimation === null ? "" : movementAnimation.message;
 
     clearMovementAnimation();
@@ -1251,10 +1432,11 @@ function finishMovementAnimation() {
     } else {
         maybeShowTurnHandoff();
     }
-}
+};
 
 // Render the animated walking token when movement is active.
-function renderMovementLayer() {
+renderMovementLayer = function() {
+    "use strict";
     let start;
     let end;
     let token;
@@ -1298,18 +1480,19 @@ function renderMovementLayer() {
     movementAnimation.rendered = true;
     movementLayerElement.innerHTML = "";
     movementLayerElement.append(token);
-    window.clearTimeout(movementTimer);
-    window.requestAnimationFrame(function () {
-        window.requestAnimationFrame(function () {
+    clearTimeout(movementTimer);
+    setTimeout(function () {
+        setTimeout(function () {
             token.style.left = end.left + "%";
             token.style.top = end.top + "%";
-        });
-    });
-    movementTimer = window.setTimeout(finishMovementAnimation, WALK_ANIMATION_MS + 80);
-}
+        }, 0);
+    }, 0);
+    movementTimer = setTimeout(finishMovementAnimation, WALK_ANIMATION_MS + 80);
+};
 
 // Close the player-target modal and optionally cancel selection.
-function closeBombModal(shouldCancelItem) {
+closeBombModal = function(shouldCancelItem) {
+    "use strict";
     const cancelledItem = currentSelectedItem(getCurrentPlayer(gameState));
 
     bombModalElement.hidden = true;
@@ -1324,10 +1507,11 @@ function closeBombModal(shouldCancelItem) {
         }
         render();
     }
-}
+};
 
 // Render thief hand targets for keys and items.
-function renderStealTargets(currentPlayer) {
+renderStealTargets = function(currentPlayer) {
+    "use strict";
     bombTargetsElement.innerHTML = "";
     bombTargetsElement.setAttribute("aria-label", "Choose item to steal");
     gameState.players.forEach(function (player) {
@@ -1338,7 +1522,7 @@ function renderStealTargets(currentPlayer) {
         if (player.hasKey) {
             const keyButton = document.createElement("button");
             const keySelected = selectedBombTargetId === player.id && selectedStealItemType === "key";
-            const profile = profileForPlayer(player.id);
+            const keyProfile = profileForPlayer(player.id);
 
             keyButton.type = "button";
             keyButton.className = keySelected ? "bomb-target selected-bomb-target player-" + player.id : "bomb-target player-" + player.id;
@@ -1346,7 +1530,7 @@ function renderStealTargets(currentPlayer) {
             keyButton.setAttribute("aria-label", "Steal key from " + playerName(player.id));
             keyButton.setAttribute("aria-pressed", keySelected ? "true" : "false");
             keyButton.innerHTML = "<span class=\"bomb-target-avatar character-sprite sprite-side player-" + player.id + " " +
-                roleClass(profile.roleId) + "\"></span><span class=\"steal-item-icon\">" + TILE_ICONS.key + "</span>";
+                roleClass(keyProfile.roleId) + "\"></span><span class=\"steal-item-icon\">" + TILE_ICONS.key + "</span>";
             keyButton.addEventListener("click", function () {
                 selectedBombTargetId = player.id;
                 selectedStealItemType = "key";
@@ -1358,7 +1542,7 @@ function renderStealTargets(currentPlayer) {
         player.items.forEach(function (itemType) {
             const button = document.createElement("button");
             const isSelected = selectedBombTargetId === player.id && selectedStealItemType === itemType;
-            const profile = profileForPlayer(player.id);
+            const itemProfile = profileForPlayer(player.id);
 
             button.type = "button";
             button.className = isSelected ? "bomb-target selected-bomb-target player-" + player.id : "bomb-target player-" + player.id;
@@ -1366,7 +1550,7 @@ function renderStealTargets(currentPlayer) {
             button.setAttribute("aria-label", "Steal " + readableType(itemType) + " from " + playerName(player.id));
             button.setAttribute("aria-pressed", isSelected ? "true" : "false");
             button.innerHTML = "<span class=\"bomb-target-avatar character-sprite sprite-side player-" + player.id + " " +
-                roleClass(profile.roleId) + "\"></span><span class=\"steal-item-icon\">" + (ITEM_ICONS[itemType] || "I") + "</span>";
+                roleClass(itemProfile.roleId) + "\"></span><span class=\"steal-item-icon\">" + (ITEM_ICONS[itemType] || "I") + "</span>";
             button.addEventListener("click", function () {
                 selectedBombTargetId = player.id;
                 selectedStealItemType = itemType;
@@ -1376,10 +1560,11 @@ function renderStealTargets(currentPlayer) {
         });
     });
     bombConfirmButton.disabled = selectedBombTargetId === null || selectedStealItemType === "";
-}
+};
 
 // Render target buttons for player-targeting items.
-function renderBombTargets() {
+renderBombTargets = function() {
+    "use strict";
     const currentPlayer = getCurrentPlayer(gameState);
     const itemType = currentSelectedItem(currentPlayer);
     const canTargetSelf = itemType === ITEM_TYPES.RESTRICT_MOVE || itemType === ITEM_TYPES.TIMED_BOMB_PACK;
@@ -1416,10 +1601,11 @@ function renderBombTargets() {
         bombTargetsElement.append(button);
     });
     bombConfirmButton.disabled = selectedBombTargetId === null;
-}
+};
 
 // Open the modal used by player-targeting items.
-function openBombModal() {
+openBombModal = function() {
+    "use strict";
     selectedBombTargetId = null;
     selectedStealItemType = "";
     isBombModalOpen = true;
@@ -1431,11 +1617,12 @@ function openBombModal() {
     if (firstTargetButton !== null) {
         firstTargetButton.focus();
     }
-}
+};
 
 // Play an explosion effect on a board tile.
-function playExplosion(tileIndex) {
-    window.setTimeout(function () {
+playExplosion = function(tileIndex) {
+    "use strict";
+    setTimeout(function () {
         const button = boardButton(tileIndex);
         const effect = document.createElement("span");
 
@@ -1447,15 +1634,16 @@ function playExplosion(tileIndex) {
         effect.textContent = TILE_ICONS.mine;
         effect.setAttribute("aria-hidden", "true");
         button.append(effect);
-        window.setTimeout(function () {
+        setTimeout(function () {
             effect.remove();
         }, 900);
     }, 0);
-}
+};
 
 // Play a monster bite effect on a board tile.
-function playMonsterBite(tileIndex) {
-    window.setTimeout(function () {
+playMonsterBite = function(tileIndex) {
+    "use strict";
+    setTimeout(function () {
         const button = boardButton(tileIndex);
         const effect = document.createElement("span");
 
@@ -1472,24 +1660,26 @@ function playMonsterBite(tileIndex) {
             effect.append(slash);
         });
         button.append(effect);
-        window.setTimeout(function () {
+        setTimeout(function () {
             effect.remove();
         }, 950);
     }, 0);
-}
+};
 
 // Create the countdown marker above a bomb carrier.
-function makeBombMarker(player) {
+makeBombMarker = function(player) {
+    "use strict";
     const bomb = document.createElement("span");
 
     bomb.className = "bomb-marker";
     bomb.textContent = TILE_ICONS.timedBombPack + String(player.bomb.turnsLeft);
     bomb.setAttribute("aria-label", "Bomb explodes in " + player.bomb.turnsLeft + " turns");
     return bomb;
-}
+};
 
 // Board and walking tokens share this badge so every on-map character shows HP.
-function makeHpMarker(player) {
+makeHpMarker = function(player) {
+    "use strict";
     const hpMarker = document.createElement("span");
     const maxHp = player.maxHp || 3;
     const hearts = Array.from({length: maxHp}, function (ignore, index) {
@@ -1500,11 +1690,12 @@ function makeHpMarker(player) {
     hpMarker.textContent = hearts.join("");
     hpMarker.setAttribute("aria-label", player.hp + " of " + maxHp + " HP");
     return hpMarker;
-}
+};
 
 // The board is rendered as 81 semantic buttons so mouse and keyboard users can
 // both select and confirm tile actions.
-function renderBoard() {
+renderBoard = function() {
+    "use strict";
     const visibleBoard = getVisibleBoard(gameState);
     boardElement.innerHTML = "";
 
@@ -1563,11 +1754,12 @@ function renderBoard() {
         });
         boardElement.append(button);
     });
-}
+};
 
 // Turn information is kept in aria-live status text so state changes are
 // announced without forcing focus away from the controls.
-function renderTurn() {
+renderTurn = function() {
+    "use strict";
     const panelGame = sidebarGameState();
     const player = getCurrentPlayer(panelGame);
     const profile = profileForPlayer(player.id);
@@ -1586,10 +1778,11 @@ function renderTurn() {
     statusElement.textContent = formatMessageForUi(uiMessage ||
         (gameState.status === "won" ? playerName(gameState.winnerId) + " has won." : gameState.lastMessage));
     effectDetailsElement.textContent = effectTextFromMessage(statusElement.textContent);
-}
+};
 
 // Render stored item buttons for the sidebar inventory.
-function renderInventory(player) {
+renderInventory = function(player) {
+    "use strict";
     inventoryElement.innerHTML = "";
     currentSelectedItem(player);
 
@@ -1637,17 +1830,19 @@ function renderInventory(player) {
         });
         inventoryElement.append(button);
     });
-}
+};
 
 // Find bombs installed by a player that can be detonated.
-function installedBombTargets(panelGame, playerId) {
+installedBombTargets = function(panelGame, playerId) {
+    "use strict";
     return panelGame.players.filter(function (player) {
         return player.bomb !== null && player.bomb.sourcePlayerId === playerId;
     });
-}
+};
 
 // Render early detonation controls for installed bombs.
-function renderDetonateControls(panelGame) {
+renderDetonateControls = function(panelGame) {
+    "use strict";
     const player = getCurrentPlayer(panelGame);
     const targets = installedBombTargets(panelGame, player.id);
 
@@ -1680,11 +1875,12 @@ function renderDetonateControls(panelGame) {
         });
         detonateControlsElement.append(button);
     });
-}
+};
 
 // Rebuild select controls from the current game state while preserving the
 // previous choice when it still exists.
-function fillSelect(select, values, formatter) {
+fillSelect = function(select, values, formatter) {
+    "use strict";
     const currentValue = select.value;
     select.innerHTML = "";
 
@@ -1698,10 +1894,11 @@ function fillSelect(select, values, formatter) {
     if (values.map(String).indexOf(currentValue) !== -1) {
         select.value = currentValue;
     }
-}
+};
 
 // Render item-use controls for the current sidebar player.
-function renderItemControls() {
+renderItemControls = function() {
+    "use strict";
     const panelGame = sidebarGameState();
     const player = getCurrentPlayer(panelGame);
     const itemType = currentSelectedItem(player);
@@ -1728,10 +1925,11 @@ function renderItemControls() {
     useItemButton.disabled = itemType === "" ||
         (isTileTargetItem ? itemTargetTiles.length < requiredTargets : !isDirectUseItem);
     noUseButton.textContent = "No Use";
-}
+};
 
 // Render the final victory screen when the game is won.
-function renderVictoryScreen() {
+renderVictoryScreen = function() {
+    "use strict";
     const hasWinner = gameState.status === "won";
     const winnerId = gameState.winnerId || 1;
 
@@ -1743,19 +1941,21 @@ function renderVictoryScreen() {
     victoryTitleElement.textContent = playerName(winnerId) + " wins";
     victoryCharacterElement.className = "victory-character character-sprite sprite-front player-" + winnerId + " " +
         roleClass(profileForPlayer(winnerId).roleId);
-}
+};
 
 // A single render pass keeps the UI consistent after every game action.
-function render() {
+render = function() {
+    "use strict";
     renderBoard();
     renderTurn();
     renderItemControls();
     renderMovementLayer();
     renderVictoryScreen();
-}
+};
 
 // Find players who lost HP between two states.
-function hpLossPlayerIds(previousGame, nextGame) {
+hpLossPlayerIds = function(previousGame, nextGame) {
+    "use strict";
     return previousGame.players.filter(function (previousPlayer) {
         const nextPlayer = nextGame.players.find(function (player) {
             return player.id === previousPlayer.id;
@@ -1765,11 +1965,12 @@ function hpLossPlayerIds(previousGame, nextGame) {
     }).map(function (player) {
         return player.id;
     });
-}
+};
 
 // Find board positions that should show bomb explosions.
-function timedBombExplosionTiles(previousGame, nextGame) {
-    const placedBombMatch = nextGame.lastMessage.match(/Timed bomb placed: Player (\d+) has/);
+timedBombExplosionTiles = function(previousGame, nextGame) {
+    "use strict";
+    const placedBombMatch = nextGame.lastMessage.match(/Timed\sbomb\splaced:\sPlayer\s(\d+)\shas/);
     const explodedTiles = previousGame.players.filter(function (previousPlayer) {
         const nextPlayer = nextGame.players.find(function (player) {
             return player.id === previousPlayer.id;
@@ -1799,10 +2000,11 @@ function timedBombExplosionTiles(previousGame, nextGame) {
     }
 
     return [];
-}
+};
 
 // Find the tile that should show a monster attack effect.
-function monsterAttackTileIndex(nextGame) {
+monsterAttackTileIndex = function(nextGame) {
+    "use strict";
     if (nextGame.lastMessage.indexOf("Monster camp attacked") === -1) {
         return null;
     }
@@ -1813,10 +2015,11 @@ function monsterAttackTileIndex(nextGame) {
         return selectedTile;
     }
     return getCurrentPlayer(gameState).position;
-}
+};
 
 // Keep damaged player feedback visible during handoff.
-function sidebarStateAfterDamage(previousGame, nextGame) {
+sidebarStateAfterDamage = function(previousGame, nextGame) {
+    "use strict";
     return Object.assign({}, previousGame, {
         key: Object.assign({}, nextGame.key),
         players: previousGame.players.map(function (previousPlayer) {
@@ -1830,10 +2033,11 @@ function sidebarStateAfterDamage(previousGame, nextGame) {
         status: nextGame.status,
         winnerId: nextGame.winnerId
     });
-}
+};
 
 // Find players who were knocked out and reset to spawn.
-function resetPlayerIds(previousGame, nextGame) {
+resetPlayerIds = function(previousGame, nextGame) {
+    "use strict";
     const resetMessage = nextGame.lastMessage.indexOf("reset to spawn") !== -1 ||
         nextGame.lastMessage.indexOf("reset to their spawn") !== -1 ||
         nextGame.lastMessage.indexOf("was reset to spawn") !== -1;
@@ -1850,30 +2054,33 @@ function resetPlayerIds(previousGame, nextGame) {
     }).map(function (player) {
         return player.id;
     });
-}
+};
 
 // Append revival feedback to a rule message.
-function resetFeedbackMessage(playerIds, baseMessage) {
+resetFeedbackMessage = function(playerIds, baseMessage) {
+    "use strict";
     if (playerIds.length === 0) {
         return baseMessage;
     }
     return baseMessage + " " + playerIds.map(playerName).join(", ") +
         (playerIds.length === 1 ? " was" : " were") + " knocked out and revived at spawn.";
-}
+};
 
 // A successful rule action either changes the active turn, changes how many
 // actions remain, changes the game status, or records a different rule message.
 // UI-only selections can be cleared after that so the next player starts fresh.
-function didSpendAction(previousGame, nextGame) {
+didSpendAction = function(previousGame, nextGame) {
+    "use strict";
     return previousGame.currentPlayerIndex !== nextGame.currentPlayerIndex ||
             previousGame.remainingActions !== nextGame.remainingActions ||
             previousGame.roundNumber !== nextGame.roundNumber ||
             previousGame.status !== nextGame.status ||
             JSON.stringify(previousGame.pendingEvent || null) !== JSON.stringify(nextGame.pendingEvent || null);
-}
+};
 
 // Replace game state and coordinate feedback, modals, and handoff.
-function updateGame(nextGame, shouldShowFeedback) {
+updateGame = function(nextGame, shouldShowFeedback) {
+    "use strict";
     const previousGame = gameState;
     const showFeedback = shouldShowFeedback !== false;
     const actionWasResolved = didSpendAction(previousGame, nextGame);
@@ -1929,17 +2136,19 @@ function updateGame(nextGame, shouldShowFeedback) {
     } else {
         maybeShowTurnHandoff();
     }
-}
+};
 
 // Return the visible board tile description for an index.
-function visibleTileAt(tileIndex) {
+visibleTileAt = function(tileIndex) {
+    "use strict";
     return getVisibleBoard(gameState).find(function (tile) {
         return tile.index === tileIndex;
     });
-}
+};
 
 // Validate board tile selection for item targeting.
-function canChooseItemTargetTile(tileIndex, itemType) {
+canChooseItemTargetTile = function(tileIndex, itemType) {
+    "use strict";
     const tile = visibleTileAt(tileIndex);
     const isTileSwapItem = itemType === ITEM_TYPES.SWAP_ANY_TILES_WITH_HP_COST;
     const player = getCurrentPlayer(gameState);
@@ -1974,10 +2183,11 @@ function canChooseItemTargetTile(tileIndex, itemType) {
         return false;
     }
     return true;
-}
+};
 
 // Convert an adjacent tile index into a movement direction.
-function directionToAdjacentTile(tileIndex) {
+directionToAdjacentTile = function(tileIndex) {
+    "use strict";
     const player = getCurrentPlayer(gameState);
     const boardSize = gameState.boardSize;
     const currentRow = Math.floor(player.position / boardSize);
@@ -2000,24 +2210,27 @@ function directionToAdjacentTile(tileIndex) {
         return DIRECTIONS.RIGHT;
     }
     return null;
-}
+};
 
 // Find the DOM button for a board tile.
-function boardButton(tileIndex) {
+boardButton = function(tileIndex) {
+    "use strict";
     return boardElement.querySelector("[data-index=\"" + tileIndex + "\"]");
-}
+};
 
 // Move keyboard focus to a board tile.
-function focusTile(tileIndex) {
+focusTile = function(tileIndex) {
+    "use strict";
     const button = boardButton(tileIndex);
 
     if (button !== null) {
         button.focus();
     }
-}
+};
 
 // Select a tile and update status text.
-function selectTile(tileIndex, shouldFocus) {
+selectTile = function(tileIndex, shouldFocus) {
+    "use strict";
     const tile = visibleTileAt(tileIndex);
     const itemType = currentSelectedItem(getCurrentPlayer(gameState));
     const selectedMessage = itemType === ""
@@ -2031,10 +2244,11 @@ function selectTile(tileIndex, shouldFocus) {
     if (shouldFocus) {
         focusTile(tileIndex);
     }
-}
+};
 
 // Use the current item once its targets are ready.
-function useSelectedItem() {
+useSelectedItem = function() {
+    "use strict";
     const itemType = currentSelectedItem(getCurrentPlayer(gameState));
     const requiredTargets = requiredTileTargetCount(itemType);
 
@@ -2052,10 +2266,11 @@ function useSelectedItem() {
         selectedTile = null;
         render();
     }
-}
+};
 
 // Toggle a board tile as an item target.
-function confirmItemTargetTile(tileIndex, itemType) {
+confirmItemTargetTile = function(tileIndex, itemType) {
+    "use strict";
     const requiredTargets = requiredTileTargetCount(itemType);
     const targetIndex = itemTargetTiles.indexOf(tileIndex);
     let droppedTile = null;
@@ -2087,10 +2302,11 @@ function confirmItemTargetTile(tileIndex, itemType) {
         setUiMessage("Choose " + (requiredTargets - itemTargetTiles.length) + " more tile.");
     }
     render();
-}
+};
 
 // Resolve the selected tile as reveal, move, or item target.
-function confirmSelectedTile(tileIndex) {
+confirmSelectedTile = function(tileIndex) {
+    "use strict";
     const itemType = currentSelectedItem(getCurrentPlayer(gameState));
     const tile = visibleTileAt(tileIndex);
     const direction = directionToAdjacentTile(tileIndex);
@@ -2137,11 +2353,12 @@ function confirmSelectedTile(tileIndex) {
         return;
     }
     updateGame(nextGame);
-}
+};
 
 // First click selects a tile. Clicking the same tile again confirms the action:
 // hidden tiles are revealed, while revealed adjacent tiles are movement targets.
-function handleTileClick(tileIndex) {
+handleTileClick = function(tileIndex) {
+    "use strict";
     const itemType = currentSelectedItem(getCurrentPlayer(gameState));
 
     if (isPaused || isFeedbackOpen || isTurnHandoffOpen || isBombModalOpen ||
@@ -2162,11 +2379,12 @@ function handleTileClick(tileIndex) {
     }
 
     selectTile(tileIndex, false);
-}
+};
 
 // Different items need different target shapes; this function only translates
 // form controls into the target object expected by game.js.
-function itemTarget(itemType) {
+itemTarget = function(itemType) {
+    "use strict";
     if (itemType === ITEM_TYPES.TIMED_BOMB_PACK) {
         return {
             playerId: selectedBombTargetId === null ? Number(targetPlayerSelect.value) : selectedBombTargetId,
@@ -2201,24 +2419,31 @@ function itemTarget(itemType) {
     }
 
     return {};
-}
+};
 
 // Return whether an event target is a board tile button.
-function isBoardTileElement(element) {
+isBoardTileElement = function(element) {
+    "use strict";
     return element !== null &&
             element.classList !== undefined &&
             element.classList.contains("tile");
-}
+};
 
 // Return whether an event target is a form control.
-function isFormControlElement(element) {
-    const tagName = element === null || typeof element.tagName !== "string" ? "" : element.tagName.toLowerCase();
+isFormControlElement = function(element) {
+    "use strict";
+    let tagName = "";
+
+    if (element !== null && typeof element.tagName === "string") {
+        tagName = element.tagName.toLowerCase();
+    }
 
     return tagName === "button" || tagName === "input" || tagName === "select";
-}
+};
 
 // Move tile selection in response to arrow keys.
-function selectedTileAfterArrow(key) {
+selectedTileAfterArrow = function(key) {
+    "use strict";
     const boardSize = gameState.boardSize;
     const baseTile = selectedTile === null ? getCurrentPlayer(gameState).position : selectedTile;
     const row = Math.floor(baseTile / boardSize);
@@ -2237,10 +2462,11 @@ function selectedTileAfterArrow(key) {
         return baseTile + 1;
     }
     return baseTile;
-}
+};
 
 // Create a new game and show the opening guide screen.
-function startPreparedGame() {
+startPreparedGame = function() {
+    "use strict";
     selectedTile = null;
     selectedItemIndex = null;
     itemTargetTiles = [];
@@ -2266,10 +2492,11 @@ function startPreparedGame() {
     gameState = createGame(playerCount(), {seed: Date.now()});
     showScreen("intro");
     introStartButton.focus();
-}
+};
 
 // Enter the board after the opening guide screen.
-function enterPreparedGame() {
+enterPreparedGame = function() {
+    "use strict";
     if (introScreen.hidden) {
         return;
     }
@@ -2278,20 +2505,23 @@ function enterPreparedGame() {
     render();
     queueTurnHandoff(getCurrentPlayer(gameState).id, null);
     maybeShowTurnHandoff();
-}
+};
 
 menuStartButton.addEventListener("click", function () {
+    "use strict";
     renderPlayerSetup();
     showScreen("setup");
 });
 
 setupBackButton.addEventListener("click", function () {
+    "use strict";
     showScreen("menu");
 });
 
 introStartButton.addEventListener("click", enterPreparedGame);
 
 setupPlayerCountElement.addEventListener("change", function () {
+    "use strict";
     const firstUnreadyIndex = firstUnreadyPlayerIndex();
 
     clampSetupActivePlayer();
@@ -2302,6 +2532,7 @@ setupPlayerCountElement.addEventListener("change", function () {
 });
 
 playerSetupListElement.addEventListener("input", function (event) {
+    "use strict";
     const playerId = Number(event.target.dataset.playerId);
     const profile = playerProfiles[playerId - 1];
     const currentNameElement = setupRolePickerElement.querySelector(".setup-current-name");
@@ -2325,6 +2556,7 @@ playerSetupListElement.addEventListener("input", function (event) {
 });
 
 setupRolePickerElement.addEventListener("click", function (event) {
+    "use strict";
     const roleButton = event.target.closest(".setup-role-choice");
     const confirmButton = event.target.closest("#setup-confirm-role");
 
@@ -2339,12 +2571,14 @@ setupRolePickerElement.addEventListener("click", function (event) {
 });
 
 setupStartGameButton.addEventListener("click", function () {
+    "use strict";
     if (isSetupReady()) {
         startPreparedGame();
     }
 });
 
 endTurnButton.addEventListener("click", function () {
+    "use strict";
     if (isPaused || isFeedbackOpen || isTurnHandoffOpen || isBombModalOpen ||
             isNoUseModalOpen || isMovementAnimating()) {
         return;
@@ -2355,6 +2589,7 @@ endTurnButton.addEventListener("click", function () {
 });
 
 useItemButton.addEventListener("click", function () {
+    "use strict";
     if (isPaused || isFeedbackOpen || isTurnHandoffOpen || isBombModalOpen ||
             isNoUseModalOpen || isMovementAnimating()) {
         return;
@@ -2373,6 +2608,7 @@ useItemButton.addEventListener("click", function () {
 });
 
 noUseButton.addEventListener("click", function () {
+    "use strict";
     if (isPaused || isFeedbackOpen || isTurnHandoffOpen || isNoUseModalOpen || isMovementAnimating()) {
         return;
     }
@@ -2381,6 +2617,7 @@ noUseButton.addEventListener("click", function () {
 });
 
 gameMenuButton.addEventListener("click", function () {
+    "use strict";
     if (gameScreen.hidden || gameState.status === "won") {
         return;
     }
@@ -2389,14 +2626,17 @@ gameMenuButton.addEventListener("click", function () {
 });
 
 resumeGameButton.addEventListener("click", function () {
+    "use strict";
     setPaused(false);
 });
 
 restartGameButton.addEventListener("click", function () {
+    "use strict";
     startPreparedGame();
 });
 
 pauseMainMenuButton.addEventListener("click", function () {
+    "use strict";
     selectedTile = null;
     selectedItemIndex = null;
     itemTargetTiles = [];
@@ -2404,10 +2644,12 @@ pauseMainMenuButton.addEventListener("click", function () {
 });
 
 victoryRestartButton.addEventListener("click", function () {
+    "use strict";
     startPreparedGame();
 });
 
 victoryMainMenuButton.addEventListener("click", function () {
+    "use strict";
     selectedTile = null;
     selectedItemIndex = null;
     itemTargetTiles = [];
@@ -2419,6 +2661,7 @@ centerPromptCloseButton.addEventListener("click", closeCenterPrompt);
 turnHandoffCard.addEventListener("click", closeTurnHandoff);
 
 bombCancelButton.addEventListener("click", function () {
+    "use strict";
     const itemType = currentSelectedItem(getCurrentPlayer(gameState));
 
     if (requestNoUse(itemType)) {
@@ -2437,6 +2680,7 @@ noUseBackButton.addEventListener("click", closeNoUseModal);
 noUseConfirmButton.addEventListener("click", confirmNoUseCancel);
 
 bombConfirmButton.addEventListener("click", function () {
+    "use strict";
     const itemType = currentSelectedItem(getCurrentPlayer(gameState));
     const countdown = Number(bombCountdownInput.value);
 
@@ -2456,6 +2700,7 @@ bombConfirmButton.addEventListener("click", function () {
 });
 
 document.addEventListener("keydown", function (event) {
+    "use strict";
     const target = event.target;
     const targetIsBoardTile = isBoardTileElement(target);
     const targetIsOtherControl = isFormControlElement(target) && !targetIsBoardTile;

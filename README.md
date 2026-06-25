@@ -26,13 +26,11 @@ Generate the API documentation:
 npm run docs
 ```
 
-Run syntax lint checks:
+Run JSLint checks:
 
 ```properties
 npm run lint
 ```
-
-Note: this template includes an older `jslint` package that cannot parse ES module `import` and `export` syntax. The `lint` script therefore uses Node's syntax checker on the project JavaScript files, while the code keeps the required module structure for the coursework API and browser app.
 
 Open the web app:
 
@@ -192,7 +190,7 @@ The browser app includes:
 
 ## API Summary
 
-The game module exports functions for creating and transitioning game state:
+The game module exports a default `Game` API object for creating and transitioning game state:
 
 - `createGame`
 - `getCurrentPlayer`
@@ -209,7 +207,7 @@ The game module exports functions for creating and transitioning game state:
 - `isGameWon`
 - `getVisibleBoard`
 
-Each exported function is documented in `game.js` with JSDoc, including parameters and return values.
+Each public API function is documented in `game.js` with JSDoc, including parameters and return values.
 
 ## Testing
 
