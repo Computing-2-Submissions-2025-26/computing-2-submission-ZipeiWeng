@@ -10,6 +10,20 @@
     "docs": "jsdoc -c jsdoc.json",
     "lint": "node --no-warnings node_modules/jslint/bin/jslint.js --edition=latest --es6 --browser --node --white --vars --unparam --bitwise --plusplus --nomen --regexp --todo web-app/game.js web-app/main.js web-app/tests/game.test.js"
   },
+  "jslintConfig": {
+    "edition": "latest",
+    "es6": true,
+    "browser": true,
+    "node": true,
+    "white": true,
+    "vars": true,
+    "unparam": true,
+    "bitwise": true,
+    "plusplus": true,
+    "nomen": true,
+    "regexp": true,
+    "todo": true
+  },
   "author": "",
   "license": "ISC",
   "dependencies": {
